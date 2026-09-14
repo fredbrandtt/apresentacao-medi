@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico por Imagem de Lago da Pedra · MEDI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Palco fluido: 100vw x 100vh. Os 16 slides são montados em main.js a partir de window.DECK (data.js). -->
+  <div class="stage" id="stage" data-slide="1">
+
+    <!-- Pool global de dois vídeos: um na frente tocando o slide atual, outro atrás com o próximo carregado. -->
+    <div class="slide-media" id="media">
+      <video class="bg-video" muted playsinline preload="auto" aria-hidden="true"></video>
+      <video class="bg-video" muted playsinline preload="auto" aria-hidden="true"></video>
+      <div class="media-fallback" aria-hidden="true"></div>
+    </div>
+
+    <div class="slides" id="slides"></div>
+
+    <!-- Chrome único: logos, régua, contador e crédito. -->
+    <div class="chrome" id="chrome" aria-hidden="true">
+      <div class="logos" id="logos"></div>
+      <div class="ruler" id="ruler"></div>
+      <p class="credit t-credit" id="credit"></p>
+      <p class="hint t-credit" id="hint"></p>
+      <button class="fs-btn" id="fsBtn" type="button" aria-label="Tela cheia">
+        <svg viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+          <g class="fs-expand">
+            <path d="M4 10V4h6M24 18v6h-6M24 10V4h-6M4 18v6h6"></path>
+          </g>
+          <g class="fs-contract">
+            <path d="M10 4v6H4M18 24v-6h6M18 4v6h6M10 24v-6H4"></path>
+          </g>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cortina neutra até fontes e primeiro vídeo estarem prontos. -->
+    <div class="curtain" id="curtain"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="data.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

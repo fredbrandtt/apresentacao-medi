@@ -1,0 +1,1270 @@
+/* styles.css
+ * Palco fluido: 100vw x 100vh, sem letterbox.
+ * Medidas horizontais e fontes em calc(N * var(--s)), com --s = 100vw / 1920.
+ * Posições verticais em porcentagem da altura da viewport.
+ */
+
+:root {
+  --s: calc(100vw / 1920);
+
+  --medi-teal: #12A89D;
+  --medi-teal-deep: #0E877E;
+  --medi-graphite: #5F5F5F;
+  --ink: #1C2528;
+  --ink-soft: #3E4A4F;
+  --ink-muted: #7C878C;
+  --line: rgba(28, 37, 40, 0.12);
+  --line-ruler: rgba(28, 37, 40, 0.18);
+  --current: #B4B8BC;
+  --proposal: var(--medi-teal);
+  --alert: #A63D2F;
+  --white: #FFFFFF;
+  --neutral: #F5F6F7;
+  --fallback: #E9ECEE;
+  --bg-outside: #0F1112;
+
+  --font-display: "Fraunces", "Geist", Georgia, serif;
+  --font-sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, Menlo, monospace;
+
+  /* Utilitários horizontais (px de palco). */
+  --m-left: calc(168 * var(--s));
+  --zone: calc(976 * var(--s));        /* colunas 1 a 8, até x = 1096 */
+  --zone-wide: calc(1134 * var(--s));  /* até a coluna 9, x = 1254 */
+  --zone-full: calc(1680 * var(--s));  /* até a coluna 12, x = 1800 */
+  --w-title: calc(1100 * var(--s));
+  --w-title-cover: calc(1240 * var(--s));
+  --w-support: calc(640 * var(--s));
+
+  --g8: calc(8 * var(--s));
+  --g16: calc(16 * var(--s));
+  --g24: calc(24 * var(--s));
+  --g32: calc(32 * var(--s));
+  --g40: calc(40 * var(--s));
+  --g48: calc(48 * var(--s));
+  --g64: calc(64 * var(--s));
+
+  /* Tipografia (px de palco). --grow permite crescer até 12% por slide. */
+  --grow: 1;
+  --fs-anchor: calc(520 * var(--s));
+  --fs-big: calc(200 * var(--s));
+  --fs-stat: calc(120 * var(--s));
+  --fs-title: calc(72 * var(--s));
+  --fs-support: calc(30 * var(--s));
+  --fs-body: calc(24 * var(--s));
+  --fs-label: calc(16 * var(--s));
+  --fs-credit: calc(14 * var(--s));
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+* { box-sizing: border-box; }
+
+/* Display: Fraunces variavel, opsz no maximo, SOFT 50. */
+.t-title,
+.t-anchor,
+.t-big,
+.t-statement {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01" 1, "kern" 1;
+  hyphens: none;
+  -webkit-hyphens: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-outside);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Palco ---------- */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-outside);
+}
+
+.stage.no-cursor { cursor: none; }
+
+/* ---------- Mídia ---------- */
+
+.slide-media {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--neutral);
+}
+
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+}
+
+.bg-video.is-front { z-index: 2; }
+
+.media-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--fallback);
+  display: none;
+}
+
+.slide-media.is-failed .media-fallback { display: block; }
+
+.curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: var(--neutral);
+  transition: opacity 300ms ease-out;
+}
+
+.curtain.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Slides ---------- */
+
+.slides {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.slide.is-active {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Âncoras verticais */
+
+.title-zone {
+  position: absolute;
+  left: var(--m-left);
+  bottom: 70%;                                 /* linha de base do título a 30% */
+  width: min(var(--w-title), calc(100vw * var(--safe, 0.52) - var(--m-left)));
+  transform: translateY(calc(14 * var(--s)));  /* compensa o descendente do line box */
+}
+
+.slide[data-layout="cover"] .title-zone { width: var(--w-title-cover); }
+
+.band {
+  position: absolute;
+  left: var(--m-left);
+  top: 36%;
+  bottom: 18%;
+  width: min(var(--zone), calc(100vw * var(--safe, 0.52) - var(--m-left)));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--g24);
+}
+
+.band.is-spread { justify-content: space-between; }
+.band.zone-wide { width: var(--zone-wide); }
+.band.zone-full { width: var(--zone-full); }
+.band.to-84 { bottom: 16%; }
+
+.closing { margin-top: auto; }
+
+.note {
+  position: absolute;
+  left: var(--m-left);
+  bottom: 12%;                                 /* base a 88% */
+  width: min(var(--zone), calc(100vw * var(--safe, 0.52) - var(--m-left)));
+  margin: 0;
+}
+
+/* ---------- Tipografia ---------- */
+
+.t-title {
+  font-size: var(--fs-title);
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.t-title,
+.t-anchor,
+.t-big { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+
+.t-title.is-64 { font-size: calc(64 * var(--s)); }
+.t-title.is-58 { font-size: calc(58 * var(--s)); }
+
+.t-title .accent { color: var(--medi-teal); }
+
+/* Linha visual mascarada */
+.tl {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.tl-in {
+  display: block;
+  will-change: transform;
+}
+
+.t-anchor,
+.t-big { font-variation-settings: "opsz" 60, "SOFT" 50, "WONK" 0; }
+
+.t-anchor {
+  font-size: var(--fs-anchor);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  color: var(--ink);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.t-big {
+  font-size: var(--fs-big);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.t-stat {
+  font-size: var(--fs-stat);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.t-support {
+  font-family: var(--font-sans);
+  font-size: calc(var(--fs-support) * var(--grow, 1));
+  font-weight: 300;
+  font-feature-settings: "ss01" 1, "kern" 1;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  max-width: var(--w-support);
+  margin: 0;
+}
+
+.t-statement {
+  font-size: calc(var(--fs-support) * var(--grow, 1));
+  line-height: 1.35;
+  color: var(--ink);
+  margin: 0;
+}
+
+.t-body {
+  font-family: var(--font-sans);
+  font-size: calc(var(--fs-body) * var(--grow, 1));
+  font-weight: 400;
+  font-feature-settings: "ss01" 1, "kern" 1;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.t-label {
+  font-family: var(--font-mono);
+  font-size: calc(var(--fs-label) * var(--grow, 1));
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.t-credit {
+  font-family: var(--font-mono);
+  font-size: var(--fs-credit);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ink { color: var(--ink); }
+.teal { color: var(--medi-teal); }
+
+/* Gradiente horizontal deslizante: um elemento de destaque por slide. */
+.grad {
+  background: linear-gradient(92deg, #0B6F68 0%, #0E877E 35%, #12A89D 70%, #0E877E 100%);
+  background-size: 200% 100%;
+  background-position: 0% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  animation: grad-slide 10s ease-in-out infinite;
+}
+
+@keyframes grad-slide {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+
+/* Gradiente vertical: grafite no topo, verde-agua na base (slides 3 e 16). */
+.grad-v {
+  background: linear-gradient(180deg, #1C2528 0%, #1C2528 38%, #12A89D 100%);
+  background-size: 100% 130%;
+  background-position: 0 0%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.grad-v.is-drift { animation: grad-drift 8s ease-in-out infinite; }
+
+@keyframes grad-drift {
+  0%, 100% { background-position: 0 0%; }
+  50% { background-position: 0 100%; }
+}
+.alert-word { transition: color 400ms ease-out; }
+.alert-word.is-on { color: var(--alert); }
+
+.rule {
+  width: 100%;
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin: 0;
+  flex: 0 0 auto;
+  transform-origin: left center;
+}
+
+.maxw-900 { max-width: calc(900 * var(--s)); }
+.maxw-980 { max-width: var(--zone); }
+
+/* ---------- Listas ---------- */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--g16);
+  width: 100%;
+}
+
+.list-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--g24);
+}
+
+.list-num {
+  flex: 0 0 calc(40 * var(--s));
+  font-family: var(--font-mono);
+  font-size: calc(var(--fs-label) * var(--grow, 1));
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.list-text { flex: 1 1 auto; }
+.list-lead { color: var(--ink); }
+
+/* Linhas rótulo + valor (slide 2) */
+.kv-list {
+  width: var(--w-support);
+  display: flex;
+  flex-direction: column;
+}
+
+.kv {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--g16) 0;
+}
+
+.kv .rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+}
+
+.kv-label {
+  font-size: calc(var(--fs-body) * var(--grow, 1));
+  color: var(--ink-soft);
+}
+
+.kv-value {
+  font-family: var(--font-mono);
+  font-size: calc(var(--fs-label) * var(--grow, 1));
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.kv.kv-total { padding-top: var(--g24); }
+.kv.kv-total .rule { bottom: auto; top: 0; }
+.kv.kv-total .kv-label,
+.kv.kv-total .kv-value { color: var(--ink); }
+
+/* Fatos do mapa (slide 9) */
+.fact {
+  position: relative;
+  width: calc(686 * var(--s));
+  padding: 0 0 var(--g16) 0;
+}
+
+.fact .rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+}
+
+/* ---------- Capa e fechamento ---------- */
+
+.presenter {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6 * var(--s));
+}
+
+.presenter .t-label { color: var(--ink); }
+
+.footer-line {
+  position: absolute;
+  left: var(--m-left);
+  right: var(--m-left);
+  bottom: 6%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+}
+
+.closing-numbers {
+  display: flex;
+  align-items: stretch;
+  gap: var(--g16);
+  width: 100%;
+}
+
+.closing-number {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g8);
+}
+
+.closing-number .t-big .unit {
+  font-size: calc(var(--fs-support) * var(--grow, 1));
+  font-weight: 300;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+  margin-left: calc(6 * var(--s));
+}
+
+/* ---------- Número âncora (slide 3) ---------- */
+
+.anchor-zone {
+  position: absolute;
+  left: var(--m-left);
+  bottom: 38%;                                 /* base do 17% a 62% */
+  transform: translateY(calc(30 * var(--s)));
+}
+
+.anchor-lines {
+  position: absolute;
+  left: var(--m-left);
+  top: 66%;
+  width: calc(440 * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: var(--g8);
+}
+
+/* ---------- Gráficos em SVG ---------- */
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart text { font-family: var(--font-sans); }
+
+.chart .mono {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  fill: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .lbl { font-size: 24px; fill: var(--ink); }
+.chart .grad-svg { fill: url(#gradTeal); }
+.chart .lbl-soft { font-size: 24px; fill: var(--ink-soft); }
+.chart .axis { stroke: var(--line); stroke-width: 1; fill: none; }
+.chart .bar-cap { fill: var(--line); }
+.chart .bar-cur { fill: var(--current); }
+.chart .bar-pro { fill: var(--proposal); }
+.chart .dot { fill: var(--ink); }
+
+.chart-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--g24);
+  width: 100%;
+}
+
+/* O numero de apoio do slide 12 fica fora do painel, em linha propria. */
+.stat-aside {
+  display: flex;
+  align-items: baseline;
+  gap: var(--g16);
+}
+
+.stat-aside .t-stat {
+  font-size: calc(var(--fs-stat) * 0.6);
+  white-space: nowrap;
+}
+
+.stat-aside .t-body { max-width: calc(330 * var(--s)); }
+
+.chart-row .chart { width: 100%; flex: 1 1 auto; min-width: 0; }
+
+/* O painel do grafico do slide 12 acompanha a largura da faixa. */
+.band > .glass {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  min-height: 0;
+}
+
+/* No slide 12 o painel se ajusta ao desenho, sem area morta. */
+.slide[data-layout="bars-grouped"] .band > .glass {
+  width: auto;
+  align-self: flex-start;
+}
+
+.slide[data-layout="bars-grouped"] .band > .glass > .chart {
+  width: calc(560 * var(--s));
+  height: auto;
+  aspect-ratio: 672 / 340 !important;
+}
+
+/* O grafico ocupa o painel inteiro e respeita a altura, sem corte. */
+.band > .glass > .chart {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto !important;
+  min-height: 0;
+}
+
+/* Em telas baixas o par grafico + apoio precisa de menos altura. */
+.slide[data-layout="bars-grouped"] .band > .glass { max-height: 62%; }
+
+@media (max-height: 820px) {
+  .stat-aside .t-stat { font-size: calc(var(--fs-stat) * 0.46); }
+  .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.86); }
+  .glass { padding: calc(24 * var(--s)); }
+  .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
+}
+
+/* O painel do grafico nao encolhe o SVG: ele se ajusta ao conteudo. */
+.band > .glass { width: 100%; }
+.band > .glass {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  min-height: 0;
+}
+
+/* No slide 12 o painel se ajusta ao desenho, sem area morta. */
+.slide[data-layout="bars-grouped"] .band > .glass {
+  width: auto;
+  align-self: flex-start;
+}
+
+.slide[data-layout="bars-grouped"] .band > .glass > .chart {
+  width: calc(560 * var(--s));
+  height: auto;
+  aspect-ratio: 672 / 340 !important;
+}
+
+/* O grafico ocupa o painel inteiro e respeita a altura, sem corte. */
+.band > .glass > .chart {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto !important;
+  min-height: 0;
+}
+
+/* Em telas baixas o par grafico + apoio precisa de menos altura. */
+.slide[data-layout="bars-grouped"] .band > .glass { max-height: 62%; }
+
+@media (max-height: 820px) {
+  .stat-aside .t-stat { font-size: calc(var(--fs-stat) * 0.46); }
+  .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.86); }
+  .glass { padding: calc(24 * var(--s)); }
+  .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
+}
+
+.timeline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--g32);
+  width: 100%;
+}
+
+.timeline-row .chart { width: calc(620 * var(--s)); flex: 1 1 auto; min-width: 0; }
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g8);
+}
+
+/* O painel do 22% tem largura propria: numero e frase nao podem quebrar. */
+.stat.glass {
+  flex: 0 0 auto;
+  width: calc(300 * var(--s));
+  padding: calc(24 * var(--s));
+}
+
+.stat.glass .t-stat { white-space: nowrap; }
+
+.stat .t-body { max-width: calc(280 * var(--s)); }
+
+/* Dentro do painel do grafico, o numero de apoio tem largura propria. */
+.chart-row .stat {
+  flex: 0 0 auto;
+  width: calc(175 * var(--s));
+}
+
+.chart-row .stat .t-stat { font-size: calc(var(--fs-stat) * 0.58); }
+.chart-row .stat .t-body { font-size: calc(var(--fs-body) * 0.86); }
+
+.chart-row .stat .t-stat { white-space: nowrap; }
+.chart-row .stat .t-body { max-width: 100%; }
+
+/* ---------- Comparativo (slide 11) ---------- */
+
+.cmp {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  --cmp-fs: calc(18 * var(--s) * var(--grow, 1));
+}
+
+.cmp-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: calc(220 * var(--s)) calc(360 * var(--s)) 1fr;
+  column-gap: var(--g16);
+  padding: calc(5 * var(--s)) 0;
+}
+
+.cmp-row .rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+}
+
+.cmp-head { padding-top: 0; }
+
+.cmp-head span {
+  font-family: var(--font-mono);
+  font-size: calc(13 * var(--s));
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.cmp-row .c-label {
+  font-family: var(--font-mono);
+  font-size: calc(var(--fs-label) * var(--grow, 1));
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.cmp-row .c-label { padding-top: calc(3 * var(--s)); }
+
+.cmp-row .c-current,
+.cmp-row .c-proposal {
+  font-size: var(--cmp-fs);
+  line-height: 1.3;
+}
+
+.cmp-row .c-current { color: var(--current); }
+.cmp-row .c-proposal { color: var(--ink); }
+
+/* ---------- Dois blocos (slide 13) ---------- */
+
+.two-blocks {
+  display: flex;
+  gap: var(--g48);
+  width: 100%;
+}
+
+.two-blocks .block {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--g16);
+}
+
+/* ---------- Mockup do relatório (slide 14) ---------- */
+
+.mock-wrap {
+  position: absolute;
+  right: var(--m-left);
+  top: 36%;
+  height: 46%;
+  width: calc(560 * var(--s));
+}
+
+.sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(560 * var(--s));
+  height: calc(720 * var(--s));
+  transform-origin: top right;
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: calc(32 * var(--s)) calc(36 * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: var(--g24);
+}
+
+.sheet-head {
+  padding-bottom: calc(12 * var(--s));
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.sheet table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet th,
+.sheet td {
+  text-align: left;
+  padding: calc(10 * var(--s)) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(16 * var(--s));
+  line-height: 1.4;
+}
+
+.sheet th {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  font-size: calc(14 * var(--s));
+}
+
+.sheet td { color: var(--ink-soft); }
+
+.sheet td.num,
+.sheet th.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet td.num { color: var(--ink); }
+
+.sheet-chart .t-credit { margin-bottom: calc(12 * var(--s)); }
+
+.sheet-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sheet-foot {
+  margin-top: auto;
+  padding-top: calc(12 * var(--s));
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- Mapa (slide 9) ---------- */
+
+.map-wrap {
+  position: absolute;
+  right: var(--m-left);
+  top: 14%;
+  bottom: 18%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.map {
+  display: block;
+  height: 100%;
+  width: auto;
+  overflow: visible;
+}
+
+.map .state {
+  fill: var(--ink);
+  fill-opacity: 0.06;
+  stroke: rgba(28, 37, 40, 0.3);
+  stroke-width: 1;
+}
+
+.map .pin { fill: var(--medi-teal); }
+
+.map .pin-next {
+  fill: none;
+  stroke: var(--medi-teal);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.map .leader { stroke: var(--line); stroke-width: 1; }
+
+.map .name {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  fill: var(--ink);
+}
+
+.map .sub {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  fill: var(--ink-muted);
+}
+
+/* ---------- Vidro: material unico da apresentacao ---------- */
+
+.glass {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: calc(40 * var(--s));
+  border-radius: calc(20 * var(--s));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.32));
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 24px 60px -30px rgba(28, 37, 40, 0.28);
+  overflow: hidden;
+}
+
+/* Especular: faixa diagonal atravessa o painel a cada 9 s, 2,4 s de duracao. */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.9) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  opacity: 0.08;
+  animation: glass-spec 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes glass-spec {
+  0%, 73.4% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
+.glass > * { position: relative; z-index: 2; }
+
+.glass .rule { background: rgba(28, 37, 40, 0.12); }
+
+.closing-numbers .glass {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: calc(24 * var(--s)) calc(20 * var(--s));
+}
+
+/* Numerais do fechamento nao podem transbordar o painel. */
+.closing-numbers .t-big {
+  font-size: calc(var(--fs-big) * 0.62);
+  white-space: nowrap;
+}
+
+.closing-numbers .t-body { white-space: nowrap; }
+
+/* O mockup do slide 14 ja tem medidas proprias. */
+.sheet.glass { padding: calc(32 * var(--s)) calc(36 * var(--s)); border: 0; }
+
+/* ---------- Chrome único ---------- */
+
+.chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.logos {
+  position: absolute;
+  top: 8%;
+  left: var(--m-left);
+  right: var(--m-left);
+  height: calc(56 * var(--s));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  opacity: 0;
+}
+
+.logo-medi,
+.logo-prefeitura {
+  width: auto;
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+.logo-medi { height: calc(56 * var(--s)); }
+.logo-prefeitura { height: calc(44 * var(--s)); image-rendering: auto; }
+
+.ruler {
+  position: absolute;
+  left: calc(40 * var(--s));
+  top: 12%;
+  bottom: 14%;
+  width: calc(28 * var(--s));
+}
+
+.ruler-mark {
+  position: absolute;
+  left: 0;
+  height: 1px;
+  width: calc(12 * var(--s));
+  background: var(--line-ruler);
+}
+
+.ruler-active {
+  position: absolute;
+  left: 0;
+  height: 1px;
+  width: calc(28 * var(--s));
+  background: var(--ink);
+}
+
+.ruler-index {
+  position: absolute;
+  left: 0;
+  font-size: calc(13 * var(--s));
+  transform: translateY(calc(-100% - 10 * var(--s)));
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.credit {
+  position: absolute;
+  left: var(--m-left);
+  bottom: 6%;                                  /* base a 94% */
+  white-space: nowrap;
+  transition: opacity 260ms ease-out;
+}
+
+.hint {
+  position: absolute;
+  right: var(--m-left);
+  bottom: 6%;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
+.hint.is-on { opacity: 1; }
+
+/* ---------- Botao de tela cheia ---------- */
+
+.fs-btn {
+  position: absolute;
+  right: var(--m-left);
+  bottom: 6%;
+  width: calc(28 * var(--s));
+  height: calc(28 * var(--s));
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: none;
+  transition: opacity 300ms ease-out;
+}
+
+.stage.show-ui .fs-btn {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.stage.show-ui .fs-btn:hover,
+.stage.show-ui .fs-btn:focus-visible { opacity: 1; }
+
+.fs-btn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+
+.fs-btn .fs-contract { display: none; }
+.stage.is-fullscreen .fs-btn .fs-expand { display: none; }
+.stage.is-fullscreen .fs-btn .fs-contract { display: block; }
+
+/* ---------- Slide 17: encerramento ---------- */
+
+/* Veu branco atras do logo, sobe de 0 a 0,45 na coreografia. */
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logo-end {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(56 * var(--s));
+}
+
+.logo-end-wrap {
+  position: relative;
+  display: block;
+  width: calc(720 * var(--s));
+}
+
+.logo-end-mark {
+  width: 100%;
+  height: auto;
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+/* Faixa de luz com mascara no formato do proprio logo. */
+.logo-end-spec {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, #FFFFFF 50%, transparent 60%);
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  opacity: 0.1;
+  mix-blend-mode: screen;
+  animation: logo-spec 12s ease-in-out infinite;
+}
+
+@keyframes logo-spec {
+  0%, 80% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
+.logo-end-cities {
+  font-size: calc(15 * var(--s));
+  color: var(--ink-muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* O video 16 congelado ganha zoom lento, uma vez, sem loop. */
+.slide-media.is-zoom .bg-video.is-front {
+  animation: slow-zoom 24s linear forwards;
+}
+
+@keyframes slow-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.035); }
+}
+
+/* ---------- Loops (item 8): amplitude baixa, ciclo lento ---------- */
+
+/* Regua: a marca ativa respira de 28 a 34 px. */
+.slide-ready .ruler-active { animation: ruler-breathe 4s ease-in-out infinite; }
+
+@keyframes ruler-breathe {
+  0%, 100% { width: calc(28 * var(--s)); }
+  50% { width: calc(34 * var(--s)); }
+}
+
+/* Slide 4: o valor mono de cada barra pisca uma vez a cada 6 s, em cascata. */
+.slide-ready .chart .mono.pulse {
+  animation: mono-flash 6s ease-in-out infinite;
+  animation-delay: calc(var(--k, 0) * 0.35s);
+}
+
+@keyframes mono-flash {
+  0%, 82%, 100% { opacity: 0.7; }
+  88% { opacity: 1; }
+}
+
+/* Anel que cresce e some: slide 6 (prazo) e slide 9 (proximo passo). */
+.ring {
+  fill: none;
+  stroke: var(--medi-teal);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+.slide-ready .ring-6 { animation: ring-out 3s ease-out infinite; }
+.slide-ready .ring-9 { animation: ring-out 2.4s ease-out infinite; }
+
+@keyframes ring-out {
+  0% { r: 0; opacity: 0.55; }
+  70%, 100% { r: 28; opacity: 0; }
+}
+
+/* Slide 9: o tracejado do pino de Lago da Pedra gira uma volta a cada 12 s. */
+.slide-ready .pin-next { animation: pin-spin 12s linear infinite; }
+
+@keyframes pin-spin {
+  to { stroke-dashoffset: -60; }
+}
+
+/* Slide 12: brilho de topo nas barras da proposta, pulso a cada 5 s. */
+.slide-ready .bar-glow { animation: bar-glow 5s ease-in-out infinite; }
+
+@keyframes bar-glow {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.6; }
+}
+
+/* Slide 16: o arco fica atras do numero, centrado no painel. */
+.arc-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(150 * var(--s));
+  height: calc(150 * var(--s));
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  overflow: visible;
+}
+
+.arc {
+  fill: none;
+  stroke: var(--medi-teal);
+  stroke-width: 1.5;
+  stroke-dasharray: 289;
+  stroke-dashoffset: 289;
+  opacity: 0;
+}
+
+/* Slide 14: os ultimos 20% da linha se redesenham a cada 10 s. */
+.redraw {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  opacity: 0;
+}
+
+.slide-ready .redraw { animation: redraw-tail 10s ease-in-out infinite; }
+
+@keyframes redraw-tail {
+  0%, 60% { stroke-dashoffset: 120; opacity: 0; }
+  70% { opacity: 1; }
+  85%, 100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* Slide 16: arco verde-agua desenha atras de cada numero, com defasagem. */
+.slide-ready .arc {
+  animation: arc-draw 3s ease-in-out infinite;
+  animation-delay: calc(var(--k, 0) * 1s);
+}
+
+@keyframes arc-draw {
+  0% { stroke-dashoffset: var(--len, 300); opacity: 0.3; }
+  55% { stroke-dashoffset: 0; opacity: 0.3; }
+  75%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* Credito a 55% de opacidade, sem loop. */
+.credit { opacity: 0.55; }
+
+.stage[data-slide="1"] .credit,
+.stage[data-slide="16"] .credit,
+.stage[data-slide="17"] .credit { opacity: 0; }
+
+/* O 17 nao tem logo pequeno no chrome: o logo grande e o slide. */
+.stage[data-slide="17"] .logos { opacity: 0 !important; }
+
+/* ---------- Movimento reduzido ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .curtain { transition: none; }
+  .glass::after,
+  .grad,
+  .grad-v.is-drift,
+  .slide-ready .ruler-active,
+  .slide-ready .chart .mono.pulse,
+  .slide-ready .ring-6,
+  .slide-ready .ring-9,
+  .slide-ready .pin-next,
+  .slide-ready .bar-glow,
+  .slide-ready .arc,
+  .slide-ready .redraw,
+  .logo-end-spec,
+  .slide-media.is-zoom .bg-video.is-front { animation: none; }
+}

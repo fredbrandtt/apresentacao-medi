@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico do 17% · MEDI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root { --s: calc(100vw / 1920); }
+    body {
+      margin: 0; padding: 32px;
+      font-family: "Geist Mono", Consolas, monospace;
+      background: #F5F6F7; color: #1C2528;
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { margin: 0 0 24px; color: #66727A; font-size: 14px; }
+
+    /* Reproduz exatamente o .t-anchor do deck */
+    .amostra {
+      display: inline-block;
+      font-family: "Bricolage Grotesque", Geist, system-ui, sans-serif;
+      font-variation-settings: "opsz" 96, "wdth" 100;
+      font-weight: 500;
+      font-size: calc(400 * var(--s));
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      background: linear-gradient(180deg, #1C2528 0%, #1C2528 38%, #0E877E 100%);
+      background-size: 100% 130%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      outline: 2px solid #A63D2F;        /* mostra a caixa real do elemento */
+      outline-offset: 0;
+    }
+    .legenda { font-size: 13px; color: #66727A; margin: 8px 0 28px; }
+
+    table { border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+    td { padding: 6px 14px 6px 0; vertical-align: top; }
+    td:first-child { color: #66727A; }
+    b { font-weight: 500; }
+    .ok { color: #0E877E; }
+    .ruim { color: #A63D2F; }
+    #saida { margin-top: 24px; padding: 16px; background: #fff; border: 1px solid rgba(28,37,40,.12); }
+    textarea { width: 100%; height: 150px; margin-top: 12px; font: 12px/1.5 "Geist Mono", monospace;
+               border: 1px solid rgba(28,37,40,.18); padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Diagnóstico do 17%</h1>
+  <p class="sub">O contorno vermelho é a caixa real do elemento. Se a letra passar do contorno, achamos o problema.</p>
+
+  <span class="amostra" id="amostra">17%</span>
+  <p class="legenda">Contorno vermelho = limite onde o gradiente consegue pintar.</p>
+
+  <div id="saida">medindo…</div>
+  <textarea id="copia" readonly></textarea>
+
+  <script>
+    document.fonts.ready.then(function () { setTimeout(medir, 300); });
+
+    function medir() {
+      var el = document.getElementById('amostra');
+      var cs = getComputedStyle(el);
+      var r = el.getBoundingClientRect();
+
+      var c = document.createElement('canvas').getContext('2d');
+      c.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      try { c.letterSpacing = cs.letterSpacing; } catch (e) {}
+      var tm = c.measureText('17%');
+
+      var sobra = r.width - tm.actualBoundingBoxRight;
+      var temFonte = document.fonts.check(cs.fontSize + ' "Bricolage Grotesque"');
+
+      var dados = {
+        bricolageCarregou: temFonte,
+        fonteUsada: cs.fontFamily,
+        tamanho: cs.fontSize,
+        letterSpacing: cs.letterSpacing,
+        variationSettings: cs.fontVariationSettings,
+        caixaLargura: Math.round(r.width),
+        tintaTermina: Math.round(tm.actualBoundingBoxRight),
+        sobraDireita: Math.round(sobra),
+        devicePixelRatio: window.devicePixelRatio,
+        viewport: window.innerWidth + 'x' + window.innerHeight,
+        userAgent: navigator.userAgent
+      };
+
+      var linhas = [
+        ['Bricolage carregou', temFonte ? '<b class="ok">SIM</b>' : '<b class="ruim">NÃO — está usando fonte de reserva</b>'],
+        ['Fonte em uso', cs.fontFamily],
+        ['Tamanho', cs.fontSize],
+        ['Largura da caixa', Math.round(r.width) + 'px'],
+        ['Onde a tinta termina', Math.round(tm.actualBoundingBoxRight) + 'px'],
+        ['Sobra à direita', (sobra < 1
+            ? '<b class="ruim">' + Math.round(sobra) + 'px — A LETRA PASSA DA CAIXA (é esse o corte)</b>'
+            : '<b class="ok">' + Math.round(sobra) + 'px — cabe folgado</b>')],
+        ['Zoom do navegador', window.devicePixelRatio + (window.devicePixelRatio !== 1 ? ' <b class="ruim">(diferente de 1)</b>' : '')],
+        ['Janela', window.innerWidth + ' x ' + window.innerHeight]
+      ];
+
+      document.getElementById('saida').innerHTML =
+        '<table>' + linhas.map(function (l) {
+          return '<tr><td>' + l[0] + '</td><td>' + l[1] + '</td></tr>';
+        }).join('') + '</table>';
+
+      document.getElementById('copia').value = JSON.stringify(dados, null, 2);
+    }
+  </script>
+</body>
+</html>

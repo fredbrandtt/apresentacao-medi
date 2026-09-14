@@ -205,12 +205,28 @@ html, body {
 
 .closing { margin-top: auto; }
 
+/* A nota carrega a origem do dado — e argumento, nao decoracao. Fica em
+ * --ink-body (e nao --ink-muted) e um degrau acima do piso, porque assenta
+ * sobre o frame do video, nao sobre branco puro. */
+/* A nota carrega a origem do dado — e argumento, nao decoracao. Assenta sobre
+ * o frame do video, que em varios slides tem area clara (maca, jaleco, parede):
+ * a leitura se resolve na tinta, nao em caixa atras do texto (viraria etiqueta,
+ * brigando com o vidro) nem em halo claro (sobre fundo claro ele reduz a
+ * separacao em vez de aumentar). Tinta cheia, peso 500, um degrau acima do piso. */
 .note {
   position: absolute;
   left: var(--m-left);
   bottom: 12%;                                 /* base a 88% */
   width: min(var(--zone), calc(100vw * var(--safe, 0.52) - var(--m-left)));
   margin: 0;
+}
+
+/* A nota usa `.t-label`, declarado depois na folha: sem o seletor duplo o
+ * rotulo venceria cor, peso e corpo — era por isso que a nota saia apagada. */
+.note.t-label {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: max(calc(18 * var(--s)), calc(var(--fs-label) * var(--grow, 1)));
 }
 
 /* Slide 3: a nota esta no fluxo da pilha, 24 px abaixo do painel.
@@ -220,6 +236,7 @@ html, body {
   width: auto;
   margin: calc(24 * var(--s)) 0 0 0;
 }
+
 
 /* ---------- Tipografia ---------- */
 
@@ -262,13 +279,29 @@ html, body {
 .t-anchor,
 .t-big { font-variation-settings: "opsz" 96, "wdth" 100; }
 
+/* O numero nunca pode cruzar a zona segura: em janela estreita o corpo cede
+ * antes da borda. A 1920 o teto de 21vw equivale aos mesmos 400 px de palco,
+ * entao no caso nominal nada muda — a trava so age quando a largura aperta. */
 .t-anchor {
-  font-size: var(--fs-anchor);
+  font-size: min(var(--fs-anchor), 21vw);
+  max-width: calc(100vw * var(--safe, 0.52) - var(--m-left));
   letter-spacing: -0.04em;
   line-height: 0.9;
   color: var(--ink);
   margin: 0;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* O numero-ancora mantem o gradiente, mas a rampa para no teal profundo em vez
+ * de ir ate o teal claro: era a ponta clara, caindo na base dos glifos sobre o
+ * frame claro do video, que sumia e fazia o % parecer cortado. */
+.t-anchor.grad-v {
+  background: linear-gradient(180deg, #1C2528 0%, #1C2528 38%, #0E877E 100%);
+  background-size: 100% 130%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .t-big {

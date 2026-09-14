@@ -467,7 +467,9 @@
     var marks = '';
     for (var i = 0; i < TOTAL; i++) marks += '<div class="ruler-mark" style="top:' + (i / (TOTAL - 1) * 100).toFixed(3) + '%"></div>';
     rulerEl.innerHTML = marks + '<div class="ruler-active" id="rulerActive" style="top:0%"></div><p class="t-credit ruler-index" id="rulerIndex" style="top:0%">01 / ' + pad2(TOTAL) + '</p>';
-    creditEl.textContent = DECK.meta.credits;
+    /* O credito persistente saiu: poluia o rodape de todos os slides. O
+     * elemento continua no DOM (vazio) para nao quebrar quem o referencia. */
+    creditEl.textContent = '';
     hintEl.textContent = DECK.meta.shortcuts || '';
   })();
   var rulerActive = document.getElementById('rulerActive');
@@ -654,7 +656,7 @@
       if (!el.classList.contains('mock-wrap')) el.style.transform = '';
     });
     scaleSheet(s);
-    Array.prototype.forEach.call(sec.querySelectorAll('.note'), function (el) { el.style.opacity = '0.7'; });
+    Array.prototype.forEach.call(sec.querySelectorAll('.note'), function (el) { el.style.opacity = '1'; });
     Array.prototype.forEach.call(sec.querySelectorAll('.draw.state'), function (el) { el.style.fillOpacity = ''; });
     Array.prototype.forEach.call(sec.querySelectorAll('[data-count]'), function (el) { setCount(el, parseFloat(el.getAttribute('data-count'))); });
     Array.prototype.forEach.call(sec.querySelectorAll('.alert-word'), function (el) { el.classList.add('is-on'); });
@@ -721,9 +723,11 @@
         els.forEach(function (el, i) { tl.to(el, { opacity: opts.to !== undefined ? opts.to : 1, duration: dur, ease: 'power2.out' }, at + i * st); });
         return at + (els.length - 1) * st + dur;
       },
+      /* Opacidade cheia: a nota ja e contida por cor e corpo. Rebaixa-la por
+       * alfa sobre o video derrubava o contraste abaixo do minimo legivel. */
       note: function (at) {
         var n = sec.querySelector('.note');
-        if (n) tl.to(n, { opacity: 0.7, duration: RM ? 0.3 : 0.6, ease: 'power2.out' }, at);
+        if (n) tl.to(n, { opacity: 1, duration: RM ? 0.3 : 0.6, ease: 'power2.out' }, at);
         return at + 0.6;
       },
       count: function (el, at, dur) {

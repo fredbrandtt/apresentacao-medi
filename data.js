@@ -30,20 +30,23 @@ window.DECK = {
     {
       id: 1,
       layout: 'cover',
-      safeRight: 0.7,
+      /* O assunto do video 1 (o tomografo) entra pela direita e sua borda
+       * esquerda fica por volta de 44% da largura. A capa agora tem manchete
+       * grande, entao a zona segura para em 0,46: o titulo cresce sem nunca
+       * encostar no equipamento. */
+      safeRight: 0.46,
       video: 'public/videos_1080p/1.mp4',
       credits: false,
       content: {
-        title: ['Diagnóstico por Imagem de Lago da Pedra', 'Da ociosidade à resolutividade'],
+        title: ['Da ociosidade', 'à resolutividade'],
         titleAccent: 2,
         support: 'Proposta de gestão médica para o serviço de radiologia e diagnóstico por imagem do município',
+        /* Credencial do apresentador: discreta, abaixo do apoio. O nome entra
+         * na hora da reuniao; o que sustenta a capa e o registro profissional. */
         presenter: [
-          '[Nome do apresentador]',
           'CRM-MA [número]  ·  RQE [número]',
           'Coordenação médica, MEDI Medicina Diagnóstica'
         ],
-        footerLeft: 'MEDI  ·  Santa Rita  ·  Rosário  ·  Paulo Ramos  ·  São Luís',
-        footerRight: 'Setembro de 2026',
         logos: true
       }
     },

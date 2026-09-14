@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-14T00:00:00.000Z",
+  "title": "Design System: Apresentação MEDI · Lago da Pedra",
+  "extensions": {
+    "colorMeta": {
+      "medi-teal": {
+        "role": "primary",
+        "displayName": "Verde-Água MEDI",
+        "canonical": "#12A89D",
+        "tonalRamp": ["#04211F", "#07352F", "#0A5049", "#0E877E", "#12A89D", "#3FC2B7", "#63D6CA", "#C4EFEA"]
+      },
+      "medi-teal-deep": {
+        "role": "primary",
+        "displayName": "Verde-Água Profundo",
+        "canonical": "#0E877E",
+        "tonalRamp": ["#031A18", "#062C28", "#09443F", "#0B6F68", "#0E877E", "#2AA79C", "#63D6CA", "#CDF0EC"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#1C2528",
+        "tonalRamp": ["#0F1112", "#1C2528", "#2F3A3F", "#3E4A4F", "#66727A", "#B4B8BC", "#E9ECEE", "#F5F6F7"]
+      },
+      "ink-body": {
+        "role": "neutral",
+        "displayName": "Tinta de Corpo",
+        "canonical": "#2F3A3F",
+        "tonalRamp": ["#0F1112", "#1C2528", "#2F3A3F", "#3E4A4F", "#66727A", "#9BA4AA", "#D7DBDE", "#F5F6F7"]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Tinta Apagada",
+        "canonical": "#66727A",
+        "tonalRamp": ["#171B1E", "#252C30", "#3E4A4F", "#525E65", "#66727A", "#96A0A6", "#C8CED2", "#EDEFF1"]
+      },
+      "current": {
+        "role": "neutral",
+        "displayName": "Cinza de Hoje",
+        "canonical": "#B4B8BC",
+        "tonalRamp": ["#1D1F21", "#34383B", "#4C5154", "#6B7175", "#8E9498", "#B4B8BC", "#D8DADC", "#F1F2F3"]
+      },
+      "alert": {
+        "role": "tertiary",
+        "displayName": "Vermelho de Interdição",
+        "canonical": "#A63D2F",
+        "tonalRamp": ["#2B0F0C", "#451813", "#68241C", "#8A3126", "#A63D2F", "#C4604F", "#DF9689", "#F6DCD7"]
+      }
+    },
+    "typographyMeta": {
+      "anchor": {
+        "displayName": "Âncora",
+        "purpose": "O número que carrega a tese inteira. Um por deck: o 17% do slide 3."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de slide em Bricolage Grotesque. fitTitle() desce 64 → 58 → 52 px até caber em duas linhas."
+      },
+      "headline": {
+        "displayName": "Número de Fechamento",
+        "purpose": "Os três números do slide 16, a 160 px, com tabular-nums."
+      },
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Listas, tabela e blocos. A cor de leitura é --ink-body."
+      },
+      "label": {
+        "displayName": "Rótulo Mono",
+        "purpose": "Notas, créditos, numeração e cabeçalho de tabela. Piso absoluto de 16 px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "vidro-repouso",
+        "value": "inset 0 1px 0 rgba(255,255,255,0.75), inset 0 0 0 1px rgba(255,255,255,0.35), 0 24px 60px -30px rgba(28,37,40,0.28)",
+        "purpose": "A única sombra do sistema. As internas fazem a borda de luz; a externa apenas descola o painel do vídeo."
+      },
+      {
+        "name": "vidro-halo",
+        "value": "0 0 48px -16px rgba(18,168,157,0.18)",
+        "purpose": "Brilho verde-água pulsando entre 0,18 e 0,32 de alfa em 6 s. Suspenso sob prefers-reduced-motion."
+      }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Saída padrão do CSS: entradas e transições de estado." },
+      { "name": "ease-in", "value": "cubic-bezier(0.7, 0, 0.84, 0)", "purpose": "Entrada padrão do CSS, usada em saídas de slide." },
+      { "name": "gsap-ease-out", "value": "expo.out", "purpose": "Easing das entradas coreografadas em GSAP." },
+      { "name": "gsap-ease-count", "value": "power3.out", "purpose": "Desaceleração dos contadores numéricos." },
+      { "name": "glass-orbit", "value": "9s linear infinite", "purpose": "Fio de luz cônico percorrendo a borda do painel." },
+      { "name": "glass-spec", "value": "9s cubic-bezier(0.4, 0, 0.2, 1) infinite", "purpose": "Faixa especular diagonal atravessando o vidro." },
+      { "name": "reveal-window", "value": "0.45 → 0.85 da duração do vídeo", "purpose": "Janela em que o texto entra, para a câmera assentar com o texto já parado." }
+    ],
+    "breakpoints": [
+      { "name": "altura-baixa", "value": "max-height: 820px" },
+      { "name": "largura-media", "value": "max-width: 1500px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Painel de Vidro",
+      "kind": "card",
+      "refersTo": "glass-panel",
+      "description": "O material único de agrupamento do deck. Translúcido, com fio de verde-água orbitando a borda.",
+      "html": "<div class=\"ds-glass\"><p class=\"ds-glass-label\">Capacidade instalada</p><p class=\"ds-glass-value\">5.414 exames/mês</p></div>",
+      "css": ".ds-glass { position: relative; isolation: isolate; max-width: 420px; padding: 40px; border-radius: 20px; background: linear-gradient(135deg, rgba(255,255,255,0.58), rgba(255,255,255,0.32)); backdrop-filter: blur(28px) saturate(140%); -webkit-backdrop-filter: blur(28px) saturate(140%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), inset 0 0 0 1px rgba(255,255,255,0.35), 0 24px 60px -30px rgba(28,37,40,0.28); overflow: hidden; } .ds-glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; background: conic-gradient(transparent 0deg 250deg, rgba(18,168,157,0) 270deg, rgba(99,214,202,0.85) 320deg, rgba(18,168,157,0) 360deg); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; pointer-events: none; animation: ds-orbit 9s linear infinite; } @keyframes ds-orbit { to { transform: rotate(360deg); } } .ds-glass > * { position: relative; z-index: 2; margin: 0; } .ds-glass-label { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-weight: 500; letter-spacing: -0.025em; font-size: 28px; color: #1C2528; } .ds-glass-value { margin-top: 8px !important; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-weight: 500; font-size: 56px; line-height: 1; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #1C2528 0%, #1C2528 38%, #12A89D 100%); -webkit-background-clip: text; background-clip: text; color: transparent; } @media (prefers-reduced-motion: reduce) { .ds-glass::before { animation: none; } }"
+    },
+    {
+      "name": "Folha de Relatório",
+      "kind": "card",
+      "refersTo": "report-sheet",
+      "description": "O contraponto opaco do vidro: papel reto, sem raio, deliberadamente burocrático. Slide 14.",
+      "html": "<div class=\"ds-sheet\"><p class=\"ds-sheet-head\">Relatório mensal · Unidade Lago da Pedra</p><table><thead><tr><th>Modalidade</th><th class=\"num\">Exames</th><th class=\"num\">No prazo, %</th></tr></thead><tbody><tr><td>Raios X</td><td class=\"num\">318</td><td class=\"num\">88</td></tr><tr><td>Tomografia</td><td class=\"num\">496</td><td class=\"num\">84</td></tr></tbody></table><p class=\"ds-sheet-foot\">Modelo ilustrativo</p></div>",
+      "css": ".ds-sheet { width: 420px; background: #FFFFFF; border: 1px solid rgba(28,37,40,0.12); padding: 32px 36px; display: flex; flex-direction: column; gap: 24px; } .ds-sheet-head { margin: 0; padding-bottom: 12px; border-bottom: 1px solid rgba(28,37,40,0.12); color: #1C2528; font-family: 'Geist', system-ui, sans-serif; font-size: 16px; } .ds-sheet table { width: 100%; border-collapse: collapse; } .ds-sheet th, .ds-sheet td { text-align: left; padding: 10px 0; border-bottom: 1px solid rgba(28,37,40,0.12); font-size: 16px; line-height: 1.4; font-family: 'Geist', system-ui, sans-serif; } .ds-sheet th { font-family: 'Geist Mono', Consolas, monospace; font-weight: 400; letter-spacing: 0.02em; color: #66727A; } .ds-sheet td { color: #2F3A3F; } .ds-sheet td.num, .ds-sheet th.num { text-align: right; font-family: 'Geist Mono', Consolas, monospace; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; } .ds-sheet td.num { color: #1C2528; } .ds-sheet-foot { margin: 0; padding-top: 12px; border-top: 1px solid rgba(28,37,40,0.12); font-family: 'Geist Mono', Consolas, monospace; font-size: 16px; letter-spacing: 0.02em; color: #66727A; }"
+    },
+    {
+      "name": "Linha do Comparativo",
+      "kind": "custom",
+      "refersTo": "comparison-row-proposal",
+      "description": "Par semântico cinza/teal do slide 11. Coluna e rótulo sustentam a leitura sem depender de cor.",
+      "html": "<div class=\"ds-cmp\"><div class=\"ds-cmp-row ds-cmp-head\"><span></span><span>Cenário atual</span><span>Proposta MEDI</span></div><div class=\"ds-cmp-row\"><span class=\"ds-c-label\">Laudo eletivo</span><span class=\"ds-c-current\">11 dias úteis</span><span class=\"ds-c-proposal\">3 dias úteis</span></div></div>",
+      "css": ".ds-cmp { display: flex; flex-direction: column; width: 100%; } .ds-cmp-row { position: relative; display: grid; grid-template-columns: 160px 180px 1fr; column-gap: 16px; padding: 8px 0; border-bottom: 1px solid rgba(28,37,40,0.12); } .ds-cmp-head { border-bottom: 1px solid rgba(28,37,40,0.12); } .ds-cmp-head span { font-family: 'Geist Mono', Consolas, monospace; font-size: 13px; letter-spacing: 0.08em; color: #66727A; } .ds-c-label { font-family: 'Geist Mono', Consolas, monospace; font-size: 13px; letter-spacing: 0.02em; color: #66727A; } .ds-c-current { font-family: 'Geist', system-ui, sans-serif; font-size: 15px; color: #B4B8BC; } .ds-c-proposal { font-family: 'Geist', system-ui, sans-serif; font-size: 15px; color: #1C2528; }"
+    },
+    {
+      "name": "Régua de Progresso",
+      "kind": "nav",
+      "refersTo": "ruler-active",
+      "description": "Marcador vertical persistente à esquerda. Dirigido por dados: uma marca por slide de DECK.slides.",
+      "html": "<div class=\"ds-ruler\"><span class=\"ds-ruler-index\">07 / 17</span><i class=\"ds-mark\"></i><i class=\"ds-mark\"></i><i class=\"ds-mark ds-mark-active\"></i><i class=\"ds-mark\"></i><i class=\"ds-mark\"></i></div>",
+      "css": ".ds-ruler { position: relative; display: flex; flex-direction: column; gap: 22px; padding-top: 28px; width: 40px; } .ds-ruler-index { position: absolute; top: 0; left: 0; font-family: 'Geist Mono', Consolas, monospace; font-size: 13px; letter-spacing: 0.02em; color: #1C2528; white-space: nowrap; } .ds-mark { display: block; height: 1px; width: 12px; background: rgba(28,37,40,0.18); } .ds-mark-active { width: 28px; background: #1C2528; }"
+    },
+    {
+      "name": "Botão de Tela Cheia",
+      "kind": "button",
+      "refersTo": "fullscreen-button",
+      "description": "O único controle clicável do deck. Persiste mesmo quando o cursor some por ociosidade.",
+      "html": "<button class=\"ds-fs-btn\" type=\"button\" aria-label=\"Tela cheia\"><svg viewBox=\"0 0 28 28\" aria-hidden=\"true\"><path d=\"M4 10V4h6M24 18v6h-6M24 10V4h-6M4 18v6h6\"></path></svg></button>",
+      "css": ".ds-fs-btn { width: 28px; height: 28px; padding: 0; border: 0; background: none; color: #1C2528; opacity: 0.45; cursor: pointer; transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-fs-btn:hover, .ds-fs-btn:focus-visible { opacity: 0.9; } .ds-fs-btn svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }"
+    },
+    {
+      "name": "Lista Numerada",
+      "kind": "custom",
+      "refersTo": "comparison-row-current",
+      "description": "Numeração em mono à esquerda, texto em corpo. A alternativa deliberada ao card nos slides 7, 8, 10 e 14.",
+      "html": "<ul class=\"ds-list\"><li class=\"ds-list-item\"><span class=\"ds-list-num\">01</span><span class=\"ds-list-text\">Sem Responsável Técnico. O serviço está irregular perante o CRM-MA e a Vigilância Sanitária.</span></li><li class=\"ds-list-item\"><span class=\"ds-list-num\">02</span><span class=\"ds-list-text\">Técnicos de radiologia fora da norma da categoria, em escala e salário.</span></li></ul>",
+      "css": ".ds-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; max-width: 520px; } .ds-list-item { display: flex; align-items: baseline; gap: 24px; } .ds-list-num { flex: 0 0 40px; font-family: 'Geist Mono', Consolas, monospace; font-size: 16px; letter-spacing: 0.02em; color: #66727A; line-height: 1.45; font-variant-numeric: tabular-nums; } .ds-list-text { flex: 1 1 auto; font-family: 'Geist', system-ui, sans-serif; font-size: 17px; line-height: 1.45; color: #2F3A3F; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Sala de Laudo",
+    "overview": "O deck é lido como um laudo, não como um folheto. Branco clínico, luz difusa, dado com fonte declarada, e uma única cor de marca que aparece onde há conclusão. A sobriedade vem da medicina, não do design: é o mesmo registro de um documento que um médico assina e um gestor arquiva. Quem olha deve pensar \"isto foi medido\", nunca \"isto foi vendido\".\n\nA densidade é deliberadamente baixa. Cada slide sustenta uma afirmação, com margem esquerda fixa de 168 px de palco e uma faixa de conteúdo que nunca invade o assunto do vídeo de fundo. O espaço vazio não é sobra: é o que dá gravidade ao dado que ficou. Nos slides de risco (5, 6, 7) esse silêncio é o instrumento — peso se comunica por isolamento, jamais por alarme.\n\nO sistema rejeita explicitamente três coisas: cara de fornecedor vendendo serviço, cara de slide de prefeitura ou licitação, e cara de denúncia. O contraste com o segundo é parte do argumento: o decisor vem da iniciativa privada e lê competência pelo acabamento.",
+    "keyCharacteristics": [
+      "Palco fluido 100vw × 100vh, sem letterbox; tudo escala de --s: calc(100vw / 1920)",
+      "Vídeo full-bleed por slide, com zona segura (safeRight) protegendo o texto do assunto da imagem",
+      "Vidro como material único de agrupamento; fora dele, tipografia solta sobre a imagem",
+      "Piso tipográfico de 16 px: nada de interface abaixo disso",
+      "Ajuste tipográfico em tempo de execução (fitTitle, distribute, scaleSheet) — o layout se autocorrige e denuncia estouro em window.__fitReport"
+    ],
+    "rules": [
+      {
+        "name": "A Regra do Par Semântico",
+        "body": "Cinza #B4B8BC é sempre o cenário atual; verde-água é sempre a proposta. No slide 11 esse par carrega significado, e por isso a distinção nunca pode depender só de cor: coluna e rótulo continuam separando os dois para quem não distingue as matizes. Fora dessa oposição, o verde-água é livre como cor de marca.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra da Palavra Única",
+        "body": "O vermelho #A63D2F é reservado a uma ocorrência em todo o deck: \"interdição\", no slide 7. Ampliá-lo converte diagnóstico em acusação. Se um segundo vermelho aparecer, o primeiro perdeu a força e o deck mudou de tom.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Piso de 16",
+        "body": "Nenhum texto abaixo de 16 px na escala base. --grow pode encolher o conteúdo, mas rótulos e notas usam max(var(--fs-label), ...) para nunca cruzar esse piso.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Número Tabular",
+        "body": "Todo numeral que anima ou se compara leva font-variant-numeric: tabular-nums. Sem isso o contador do slide 2 treme a cada quadro enquanto conta até 5.414.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Ajuste Automático",
+        "body": "Tipografia não é cravada à mão por slide: fitTitle(), distribute(), fitWidthRow() e scaleSheet() medem e corrigem depois da montagem. Depois de mexer em copy ou layout, window.__fitReport tem de sair vazio.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Vidro Não Aninhado",
+        "body": "Painel dentro de painel é proibido. Se dois grupos precisam de vidro no mesmo slide, eles são irmãos com --orbit-delay distinto, nunca pai e filho.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra do Vidro Justificado",
+        "body": "O vidro existe para separar conteúdo da imagem quando a imagem é clara demais para sustentar texto solto, e para agrupar. Um painel que não agrupa nada e não resolve legibilidade deve sair.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do escalar toda medida horizontal e todo tamanho de fonte por calc(N * var(--s)) no CSS e por S() no JS.",
+      "Do reavaliar o safeRight do slide sempre que trocar o vídeo de fundo.",
+      "Do conferir window.__fitReport depois de qualquer mexida em copy, tipografia ou layout.",
+      "Do declarar a origem do dado quando ele for estimativa ou modelo. Prova antes de promessa.",
+      "Do dar peso ao risco por isolamento — menos elementos, mais respiro, entrada mais lenta.",
+      "Do manter os dois caminhos de degradação: sem GSAP, via settle(); e com prefers-reduced-motion, via RM.",
+      "Do usar tabular-nums em todo numeral que anima ou se compara."
+    ],
+    "donts": [
+      "Don't dar ao deck cara de fornecedor vendendo serviço: sem superlativo, sem promessa de transformação, sem \"soluções\".",
+      "Don't dar ao deck cara de slide de prefeitura ou licitação: sem PowerPoint institucional, tabela cinza, Arial, clip-art ou brasão ampliado.",
+      "Don't deixar o deck soar como denúncia ou acusação à gestão. O sujeito das frases de risco é o serviço ou a situação, nunca uma pessoa.",
+      "Don't dar ao deck cara de startup de saúde ou deck de investidor: sem card flutuante, ilustração isométrica ou métrica de vaidade.",
+      "Don't aninhar painéis de vidro, nem usar vidro que não agrupe nada.",
+      "Don't estender o vermelho #A63D2F para além de \"interdição\" no slide 7.",
+      "Don't distinguir \"cenário atual\" de \"proposta\" só por cor.",
+      "Don't escrever texto de interface abaixo de 16 px na escala base.",
+      "Don't converter o projeto para import/export nem introduzir passo de build: o deck tem de abrir com duplo clique via file://.",
+      "Don't reordenar slides em data.js sem remapear CHOREO — as chaves são os ids, não as posições."
+    ]
+  }
+}

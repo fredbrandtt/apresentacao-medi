@@ -2,6 +2,8 @@
  * Palco fluido: 100vw x 100vh, sem letterbox.
  * Medidas horizontais e fontes em calc(N * var(--s)), com --s = 100vw / 1920.
  * Posições verticais em porcentagem da altura da viewport.
+ * Display: Bricolage Grotesque 500. Corpo: Geist 400. Notas: Geist Mono 16 px.
+ * Nenhum texto de interface abaixo de 16 px na escala base.
  */
 
 :root {
@@ -12,7 +14,8 @@
   --medi-graphite: #5F5F5F;
   --ink: #1C2528;
   --ink-soft: #3E4A4F;
-  --ink-muted: #7C878C;
+  --ink-body: #2F3A3F;                 /* corpo, listas e tabela */
+  --ink-muted: #66727A;                /* notas em Geist Mono */
   --line: rgba(28, 37, 40, 0.12);
   --line-ruler: rgba(28, 37, 40, 0.18);
   --current: #B4B8BC;
@@ -23,7 +26,7 @@
   --fallback: #E9ECEE;
   --bg-outside: #0F1112;
 
-  --font-display: "Fraunces", "Geist", Georgia, serif;
+  --font-display: "Bricolage Grotesque", "Geist", system-ui, sans-serif;
   --font-sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, Menlo, monospace;
 
@@ -46,14 +49,15 @@
 
   /* Tipografia (px de palco). --grow permite crescer até 12% por slide. */
   --grow: 1;
-  --fs-anchor: calc(520 * var(--s));
-  --fs-big: calc(200 * var(--s));
+  --fs-anchor: calc(400 * var(--s));   /* numero ancora do slide 3 */
+  --fs-big: calc(160 * var(--s));      /* numeros do fechamento */
   --fs-stat: calc(120 * var(--s));
-  --fs-title: calc(72 * var(--s));
+  --fs-title: calc(64 * var(--s));
+  --fs-title-cover: calc(112 * var(--s));  /* manchete da capa: duas linhas curtas */
   --fs-support: calc(30 * var(--s));
   --fs-body: calc(24 * var(--s));
-  --fs-label: calc(16 * var(--s));
-  --fs-credit: calc(14 * var(--s));
+  --fs-label: calc(16 * var(--s));     /* piso: nenhum texto abaixo de 16 px */
+  --fs-credit: calc(16 * var(--s));
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
@@ -61,16 +65,16 @@
 
 * { box-sizing: border-box; }
 
-/* Display: Fraunces variavel, opsz no maximo, SOFT 50. */
+/* Display: Bricolage Grotesque variavel, peso 500, opsz 96, wdth 100. */
 .t-title,
 .t-anchor,
 .t-big,
 .t-statement {
   font-family: var(--font-display);
-  font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  font-feature-settings: "ss01" 1, "kern" 1;
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-feature-settings: "kern" 1;
   hyphens: none;
   -webkit-hyphens: none;
 }
@@ -175,7 +179,12 @@ html, body {
   transform: translateY(calc(14 * var(--s)));  /* compensa o descendente do line box */
 }
 
-.slide[data-layout="cover"] .title-zone { width: var(--w-title-cover); }
+/* A capa tem manchete grande: a largura tambem respeita a zona segura, senao
+ * o titulo cresceria por cima do assunto do video. */
+.slide[data-layout="cover"] .title-zone {
+  width: min(var(--w-title-cover), calc(100vw * var(--safe, 0.46) - var(--m-left)));
+  bottom: 46%;                                 /* manchete mais alta: abre a coluna abaixo dela */
+}
 
 .band {
   position: absolute;
@@ -204,6 +213,14 @@ html, body {
   margin: 0;
 }
 
+/* Slide 3: a nota esta no fluxo da pilha, 24 px abaixo do painel.
+ * Precisa vencer o `margin: 0` de .note, declarado depois na cascata. */
+.note.anchor-note {
+  position: static;
+  width: auto;
+  margin: calc(24 * var(--s)) 0 0 0;
+}
+
 /* ---------- Tipografia ---------- */
 
 .t-title {
@@ -218,8 +235,14 @@ html, body {
 .t-anchor,
 .t-big { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
 
-.t-title.is-64 { font-size: calc(64 * var(--s)); }
-.t-title.is-58 { font-size: calc(58 * var(--s)); }
+/* Degraus do fitTitle: o titulo base ja e 64, entao desce 58 -> 52. */
+.t-title.is-64 { font-size: calc(58 * var(--s)); }
+.t-title.is-58 { font-size: calc(52 * var(--s)); }
+
+/* Capa: manchete grande. Os degraus do fitTitle descem proporcionalmente,
+ * caso a copy mude e passe de duas linhas. */
+.slide[data-layout="cover"] .t-title.is-64 { font-size: calc(96 * var(--s)); }
+.slide[data-layout="cover"] .t-title.is-58 { font-size: calc(84 * var(--s)); }
 
 .t-title .accent { color: var(--medi-teal); }
 
@@ -237,7 +260,7 @@ html, body {
 }
 
 .t-anchor,
-.t-big { font-variation-settings: "opsz" 60, "SOFT" 50, "WONK" 0; }
+.t-big { font-variation-settings: "opsz" 96, "wdth" 100; }
 
 .t-anchor {
   font-size: var(--fs-anchor);
@@ -260,7 +283,7 @@ html, body {
 
 .t-stat {
   font-size: var(--fs-stat);
-  font-weight: 300;
+  font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--ink);
@@ -271,10 +294,10 @@ html, body {
 .t-support {
   font-family: var(--font-sans);
   font-size: calc(var(--fs-support) * var(--grow, 1));
-  font-weight: 300;
+  font-weight: 400;
   font-feature-settings: "ss01" 1, "kern" 1;
   line-height: 1.35;
-  color: var(--ink-soft);
+  color: var(--ink-body);
   max-width: var(--w-support);
   margin: 0;
 }
@@ -292,13 +315,13 @@ html, body {
   font-weight: 400;
   font-feature-settings: "ss01" 1, "kern" 1;
   line-height: 1.45;
-  color: var(--ink-soft);
+  color: var(--ink-body);
   margin: 0;
 }
 
 .t-label {
   font-family: var(--font-mono);
-  font-size: calc(var(--fs-label) * var(--grow, 1));
+  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
   font-weight: 400;
   line-height: 1.4;
   letter-spacing: 0.02em;
@@ -391,7 +414,8 @@ html, body {
 .list-num {
   flex: 0 0 calc(40 * var(--s));
   font-family: var(--font-mono);
-  font-size: calc(var(--fs-label) * var(--grow, 1));
+  /* --grow encolhe o conteudo, mas 16 px e o piso de legibilidade. */
+  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
   letter-spacing: 0.02em;
   color: var(--ink-muted);
   line-height: 1.45;
@@ -402,8 +426,21 @@ html, body {
 .list-lead { color: var(--ink); }
 
 /* Linhas rótulo + valor (slide 2) */
+/* Painel do slide 2: colunas 1 a 7, 960 px na escala base. O painel se
+ * dimensiona pelo conteudo; a faixa nao pode espremê-lo, senao o destaque
+ * (rotulo + numero de 56 px) e cortado pelo overflow do vidro. */
+.kv-panel {
+  width: min(calc(960 * var(--s)), calc(100vw * var(--safe, 0.56) - var(--m-left)));
+  padding: calc(40 * var(--s));
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+}
+
+.kv-panel .kv-list { flex: 0 0 auto; }
+
 .kv-list {
-  width: var(--w-support);
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -416,6 +453,10 @@ html, body {
   padding: var(--g16) 0;
 }
 
+/* No painel do slide 2 as quatro linhas cedem altura para o destaque
+ * (rotulo 28 px + numero 56 px) caber na faixa sem reduzir a tipografia. */
+.kv-panel .kv:not(.kv-total) { padding: calc(10 * var(--s)) 0; }
+
 .kv .rule {
   position: absolute;
   left: 0;
@@ -426,22 +467,63 @@ html, body {
 
 .kv-label {
   font-size: calc(var(--fs-body) * var(--grow, 1));
-  color: var(--ink-soft);
+  color: var(--ink-body);
 }
 
 .kv-value {
   font-family: var(--font-mono);
-  font-size: calc(var(--fs-label) * var(--grow, 1));
+  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
   letter-spacing: 0.02em;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
-.kv.kv-total { padding-top: var(--g24); }
-.kv.kv-total .rule { bottom: auto; top: 0; }
-.kv.kv-total .kv-label,
-.kv.kv-total .kv-value { color: var(--ink); }
+/* Destaque do slide 2: separado por 32 px, divisor mais escuro, rotulo em
+ * display a 28 px e o numero a 56 px com o gradiente vertical. */
+.kv.kv-total {
+  margin-top: calc(32 * var(--s));
+  padding-top: calc(32 * var(--s));
+  align-items: baseline;
+}
+
+.kv.kv-total .rule {
+  bottom: auto;
+  top: 0;
+  background: rgba(28, 37, 40, 0.28);
+}
+
+.kv.kv-total .kv-label {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-size: calc(28 * var(--s));
+  color: var(--ink);
+}
+
+.kv.kv-total .kv-value {
+  display: flex;
+  align-items: baseline;
+  gap: calc(10 * var(--s));
+}
+
+.kv-total-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-size: calc(56 * var(--s));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kv-total-unit {
+  font-family: var(--font-mono);
+  font-size: calc(16 * var(--s));
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+}
 
 /* Fatos do mapa (slide 9) */
 .fact {
@@ -458,6 +540,83 @@ html, body {
   width: auto;
 }
 
+/* ---------- Capa ---------- */
+
+/* Veu de base: o video 1 varia de quase branco a cinza claro enquanto a
+ * camera anda, e em 1920 o tomografo ainda nem entrou no quadro. O veu da
+ * ao texto uma base constante, so na coluna esquerda, sem virar retangulo
+ * visivel: dissolve na horizontal e na vertical. */
+.cover-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(100deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.86) 26%,
+      rgba(255, 255, 255, 0.52) 44%,
+      rgba(255, 255, 255, 0) 62%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+/* Linha de contexto acima da manchete: assunto e localidade, em mono, no
+ * mesmo piso de 16 px do resto do deck. Nao e eyebrow de secao — a capa e o
+ * unico lugar do deck onde ela aparece. */
+.cover-eyebrow {
+  color: var(--ink-muted);
+  margin: 0 0 var(--g24) 0;
+}
+
+/* Manchete da capa: duas linhas curtas, bem maiores que o titulo padrao. */
+.slide[data-layout="cover"] .t-title {
+  font-size: var(--fs-title-cover);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+/* A segunda linha e a tese: teal solido, sem gradiente. Em projetor o
+ * chapado le melhor que o degrade, e a capa e onde o acabamento e julgado. */
+.slide[data-layout="cover"] .t-title .accent,
+.slide[data-layout="cover"] .t-title .grad {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--medi-teal);
+  animation: none;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* A faixa da capa comeca abaixo da manchete e nao se espalha ate 82%: o
+ * conjunto apoio + apresentador fica agrupado, com o respiro embaixo. */
+/* A faixa da capa e dimensionada pelo conteudo, nao pela altura disponivel:
+ * assim distribute() nao precisa encolher a tipografia para preencher sobra. */
+.cover-band {
+  /* 62%: abaixo da base da manchete, com respiro real entre o filete e a
+   * ultima linha do titulo. Sem a linha de rodape, o conjunto desce. */
+  top: 62%;
+  bottom: auto;
+  height: auto;
+  width: min(calc(620 * var(--s)), calc(100vw * var(--safe, 0.46) - var(--m-left)));
+  gap: var(--g24);
+  justify-content: flex-start;
+  z-index: 1;
+}
+
+/* Filete curto separando manchete do bloco de apoio. */
+.cover-rule {
+  width: calc(84 * var(--s));
+  height: 2px;
+  background: var(--medi-teal);
+  flex: 0 0 auto;
+}
+
+.slide[data-layout="cover"] .t-support {
+  max-width: calc(560 * var(--s));
+  color: var(--ink-body);
+}
+
 /* ---------- Capa e fechamento ---------- */
 
 .presenter {
@@ -467,6 +626,19 @@ html, body {
 }
 
 .presenter .t-label { color: var(--ink); }
+
+/* Na capa a credencial e nota de rodape, nao informacao de primeira leitura:
+ * fica em tinta apagada e um degrau abaixo do apoio, com respiro maior acima
+ * para se separar do bloco que a antecede. */
+.slide[data-layout="cover"] .presenter {
+  margin-top: var(--g16);
+  gap: calc(4 * var(--s));
+}
+
+.slide[data-layout="cover"] .presenter .t-label {
+  color: var(--ink-muted);
+  font-size: max(calc(14 * var(--s)), calc(var(--fs-label) * 0.88));
+}
 
 .footer-line {
   position: absolute;
@@ -494,9 +666,9 @@ html, body {
 
 .closing-number .t-big .unit {
   font-size: calc(var(--fs-support) * var(--grow, 1));
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0;
-  color: var(--ink-soft);
+  color: var(--ink-body);
   margin-left: calc(6 * var(--s));
 }
 
@@ -505,19 +677,51 @@ html, body {
 .anchor-zone {
   position: absolute;
   left: var(--m-left);
-  bottom: 38%;                                 /* base do 17% a 62% */
-  transform: translateY(calc(30 * var(--s)));
+  bottom: 44%;                                 /* base do 17% a 56% */
+}
+
+/* Pilha do slide 3: painel e nota no mesmo fluxo, ancorada 40 px abaixo da
+ * base do numero (que fica a 56% da altura). A nota acompanha a altura real
+ * do painel, que e definida pelo conteudo. */
+.anchor-stack {
+  position: absolute;
+  left: var(--m-left);
+  top: calc(56% + 40 * var(--s));
+  width: fit-content;
+  max-width: calc(720 * var(--s));
 }
 
 .anchor-lines {
-  position: absolute;
-  left: var(--m-left);
-  top: 66%;
-  width: calc(440 * var(--s));
-  display: flex;
-  flex-direction: column;
-  gap: var(--g8);
+  width: fit-content;
+  max-width: 100%;
+  padding: calc(32 * var(--s)) calc(40 * var(--s));
 }
+
+.anchor-line-1 {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: calc(28 * var(--s));
+  line-height: 1.35;
+  color: var(--ink-body);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.anchor-line-2 {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-size: calc(32 * var(--s));
+  line-height: 1.2;
+  margin: calc(12 * var(--s)) 0 0 0;
+}
+
+/* Se 28 px nao couber em uma linha dentro do max-width, desce para 26. */
+@media (max-width: 1500px) {
+  .anchor-line-1 { font-size: calc(26 * var(--s)); }
+}
+
 
 /* ---------- Gráficos em SVG ---------- */
 
@@ -603,31 +807,14 @@ html, body {
 
 @media (max-height: 820px) {
   .stat-aside .t-stat { font-size: calc(var(--fs-stat) * 0.46); }
-  .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.86); }
+  /* O texto de apoio do slide 12 cede altura: a Bricolage ocupa mais linha
+   * que a fonte anterior, e a faixa e a mesma. */
+  .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.78); line-height: 1.3; }
   .glass { padding: calc(24 * var(--s)); }
   .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
+  .slide[data-layout="bars-grouped"] .band { gap: var(--g16); }
 }
 
-/* O painel do grafico nao encolhe o SVG: ele se ajusta ao conteudo. */
-.band > .glass { width: 100%; }
-.band > .glass {
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  min-height: 0;
-}
-
-/* No slide 12 o painel se ajusta ao desenho, sem area morta. */
-.slide[data-layout="bars-grouped"] .band > .glass {
-  width: auto;
-  align-self: flex-start;
-}
-
-.slide[data-layout="bars-grouped"] .band > .glass > .chart {
-  width: calc(560 * var(--s));
-  height: auto;
-  aspect-ratio: 672 / 340 !important;
-}
 
 /* O grafico ocupa o painel inteiro e respeita a altura, sem corte. */
 .band > .glass > .chart {
@@ -714,7 +901,7 @@ html, body {
 
 .cmp-head span {
   font-family: var(--font-mono);
-  font-size: calc(13 * var(--s));
+  font-size: calc(16 * var(--s));
   letter-spacing: 0.08em;
   color: var(--ink-muted);
   line-height: 1.4;
@@ -722,7 +909,7 @@ html, body {
 
 .cmp-row .c-label {
   font-family: var(--font-mono);
-  font-size: calc(var(--fs-label) * var(--grow, 1));
+  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
   letter-spacing: 0.02em;
   color: var(--ink-muted);
   line-height: 1.4;
@@ -804,10 +991,10 @@ html, body {
   font-weight: 400;
   letter-spacing: 0.02em;
   color: var(--ink-muted);
-  font-size: calc(14 * var(--s));
+  font-size: calc(16 * var(--s));
 }
 
-.sheet td { color: var(--ink-soft); }
+.sheet td { color: var(--ink-body); }
 
 .sheet td.num,
 .sheet th.num {
@@ -879,7 +1066,7 @@ html, body {
 
 .map .sub {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.02em;
   fill: var(--ink-muted);
 }
@@ -901,6 +1088,77 @@ html, body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.35),
     0 24px 60px -30px rgba(28, 37, 40, 0.28);
   overflow: hidden;
+}
+
+/* Fio de luz percorrendo a borda: um segmento curto de conica gira pelo
+ * contorno, recortado em moldura de 1,5 px pela mascara. Cada painel de um
+ * mesmo slide entra com defasagem propria (--orbit-delay). */
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  z-index: 1;
+  background: conic-gradient(from var(--angle),
+    transparent 0deg 250deg,
+    rgba(18, 168, 157, 0) 270deg,
+    rgba(99, 214, 202, 0.85) 320deg,
+    rgba(18, 168, 157, 0) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: glass-orbit 9s linear infinite;
+  animation-delay: var(--orbit-delay, 0s);
+}
+
+@keyframes glass-orbit {
+  to { --angle: 360deg; }
+}
+
+/* Sem @property (Firefox antigo, Safari < 16.4) a variavel nao interpola:
+ * o fio fica parado. Nesse caso, gira o proprio pseudo-elemento. */
+@supports not (background: conic-gradient(from var(--angle), red, blue)) {
+  .glass::before {
+    animation: glass-orbit-spin 9s linear infinite;
+    animation-delay: var(--orbit-delay, 0s);
+    background: conic-gradient(
+      transparent 0deg 250deg,
+      rgba(18, 168, 157, 0) 270deg,
+      rgba(99, 214, 202, 0.85) 320deg,
+      rgba(18, 168, 157, 0) 360deg);
+  }
+}
+
+@keyframes glass-orbit-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Brilho externo pulsando entre 0,18 e 0,32 de alfa em 6 s. */
+.glass {
+  animation: glass-halo 6s ease-in-out infinite;
+  animation-delay: var(--orbit-delay, 0s);
+}
+
+@keyframes glass-halo {
+  0%, 100% { box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 24px 60px -30px rgba(28, 37, 40, 0.28),
+    0 0 48px -16px rgba(18, 168, 157, 0.18); }
+  50% { box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 24px 60px -30px rgba(28, 37, 40, 0.28),
+    0 0 48px -16px rgba(18, 168, 157, 0.32); }
 }
 
 /* Especular: faixa diagonal atravessa o painel a cada 9 s, 2,4 s de duracao. */
@@ -932,9 +1190,10 @@ html, body {
   padding: calc(24 * var(--s)) calc(20 * var(--s));
 }
 
-/* Numerais do fechamento nao podem transbordar o painel. */
+/* Numerais do fechamento a 160 px cheios; se a linha dos tres paineis
+ * transbordar, fitWidthRow() os reduz em tempo de execucao. */
 .closing-numbers .t-big {
-  font-size: calc(var(--fs-big) * 0.62);
+  font-size: var(--fs-big);
   white-space: nowrap;
 }
 
@@ -952,16 +1211,16 @@ html, body {
   pointer-events: none;
 }
 
+/* Persistentes em todos os slides: canto superior esquerdo, na margem de
+ * conteudo, a 64 px do topo. MEDI, divisor, prefeitura, alinhados pela
+ * linha central. */
 .logos {
   position: absolute;
-  top: 8%;
+  top: calc(64 * var(--s));
   left: var(--m-left);
-  right: var(--m-left);
-  height: calc(56 * var(--s));
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  opacity: 0;
+  align-items: center;
+  opacity: 1;
 }
 
 .logo-medi,
@@ -969,15 +1228,31 @@ html, body {
   width: auto;
   display: block;
   mix-blend-mode: multiply;
+  transition: height 500ms var(--ease-out);
 }
 
-.logo-medi { height: calc(56 * var(--s)); }
-.logo-prefeitura { height: calc(44 * var(--s)); image-rendering: auto; }
+.logo-divisor {
+  flex: 0 0 auto;
+  width: 1px;
+  height: calc(32 * var(--s));
+  margin: 0 calc(24 * var(--s));
+  background: rgba(28, 37, 40, 0.14);
+}
 
+/* Slides 2 a 16: tamanho reduzido. */
+.logo-medi { height: calc(40 * var(--s)); }
+.logo-prefeitura { height: calc(38 * var(--s)); image-rendering: auto; }
+
+/* Capa: os dois maiores. A troca anima em 500 ms nas transicoes 1<->2. */
+.stage[data-slide="1"] .logo-medi { height: calc(64 * var(--s)); }
+.stage[data-slide="1"] .logo-prefeitura { height: calc(60 * var(--s)); }
+
+/* A primeira marca desce para o rotulo NN / 17 nao encostar nos logos,
+ * que agora ocupam a faixa de 64 px do topo. */
 .ruler {
   position: absolute;
   left: calc(40 * var(--s));
-  top: 12%;
+  top: 20%;
   bottom: 14%;
   width: calc(28 * var(--s));
 }
@@ -1001,7 +1276,7 @@ html, body {
 .ruler-index {
   position: absolute;
   left: 0;
-  font-size: calc(13 * var(--s));
+  font-size: calc(16 * var(--s));
   transform: translateY(calc(-100% - 10 * var(--s)));
   white-space: nowrap;
   color: var(--ink);
@@ -1028,29 +1303,26 @@ html, body {
 
 /* ---------- Botao de tela cheia ---------- */
 
+/* Sempre visivel, independente do mouse: canto inferior direito, a 32 px
+ * das bordas. O cursor some com a ociosidade; o botao nao. */
 .fs-btn {
   position: absolute;
-  right: var(--m-left);
-  bottom: 6%;
+  right: calc(32 * var(--s));
+  bottom: calc(32 * var(--s));
   width: calc(28 * var(--s));
   height: calc(28 * var(--s));
   padding: 0;
   border: 0;
   background: none;
   color: var(--ink);
-  opacity: 0;
+  opacity: 0.45;
   cursor: pointer;
-  pointer-events: none;
-  transition: opacity 300ms ease-out;
-}
-
-.stage.show-ui .fs-btn {
-  opacity: 0.6;
   pointer-events: auto;
+  transition: opacity 200ms ease-out;
 }
 
-.stage.show-ui .fs-btn:hover,
-.stage.show-ui .fs-btn:focus-visible { opacity: 1; }
+.fs-btn:hover,
+.fs-btn:focus-visible { opacity: 0.9; }
 
 .fs-btn svg {
   display: block;
@@ -1124,7 +1396,7 @@ html, body {
 }
 
 .logo-end-cities {
-  font-size: calc(15 * var(--s));
+  font-size: calc(16 * var(--s));
   color: var(--ink-muted);
   text-align: center;
   margin: 0;
@@ -1248,12 +1520,14 @@ html, body {
 .stage[data-slide="17"] .credit { opacity: 0; }
 
 /* O 17 nao tem logo pequeno no chrome: o logo grande e o slide. */
-.stage[data-slide="17"] .logos { opacity: 0 !important; }
+.stage[data-slide="17"] .logos { opacity: 0; transition: opacity 400ms ease-out; }
 
 /* ---------- Movimento reduzido ---------- */
 
 @media (prefers-reduced-motion: reduce) {
   .curtain { transition: none; }
+  .glass,
+  .glass::before,
   .glass::after,
   .grad,
   .grad-v.is-drift,

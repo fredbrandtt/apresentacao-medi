@@ -13,10 +13,14 @@
   var EXIT_MS = 260;
   var ENTER_DELAY_MS = 520;    /* piso, quando nao ha video com duracao conhecida */
   var LOCK_MS = 700;
-  var REVEAL_START = 0.55;     /* fracao da duracao do video em que o texto comeca */
-  var REVEAL_START_S3 = 0.45;  /* slide 3: a contagem termina junto com a camera */
-  var REVEAL_END = 0.90;       /* a revelacao tem de terminar antes disso */
+  var VIDEO_RATE = 2.0;        /* os videos nao tem audio: acelerar nao gera artefato */
+  var REVEAL_START = 0.35;     /* fracao da duracao efetiva em que o texto comeca */
+  var REVEAL_START_S3 = 0.35;  /* slide 3: a contagem termina junto com a camera */
+  var REVEAL_END = 0.85;       /* a revelacao tem de terminar antes disso */
   var SKIP_MS = 300;           /* completar a revelacao ao pedido do apresentador */
+  /* Volta e video ja no fim: o texto entra de imediato, sem esperar camera. */
+  var BACK_REVEAL_MS = 400;
+  var BACK_STAGGER = 0.03;
   var VIDEO_FALLBACK_S = 8;
   var DIGIT_BUFFER_MS = 1200;
   var CURSOR_IDLE_MS = 2500;
@@ -65,23 +69,27 @@
     return { prefix: m[1], n: parseInt(m[2].replace(/\./g, ''), 10), suffix: m[3] };
   }
 
-  function titleHTML(title, accentLine) {
+  /* `eyebrow` entra dentro da zona do titulo: empilhado no fluxo, acima do h1,
+   * sem deslocamento calculado a mao — a manchete pode mudar de corpo ou de
+   * numero de linhas que a linha de contexto continua no lugar. */
+  function titleHTML(title, accentLine, eyebrow) {
     var lines = Array.isArray(title) ? title : [title];
     var data = lines.map(function (t, i) { return { text: t, accent: accentLine === i + 1 }; });
     var plain = lines.map(function (l, i) {
       return '<span' + (accentLine === i + 1 ? ' class="accent"' : '') + '>' + esc(l) + '</span>';
     }).join('<br>');
-    return '<div class="title-zone blk" data-custom><h1 class="t-title" data-lines="' + esc(JSON.stringify(data)) + '">' + plain + '</h1></div>';
+    var top = eyebrow ? '<p class="cover-eyebrow t-label">' + esc(eyebrow) + '</p>' : '';
+    return '<div class="title-zone blk reveal" data-custom>' + top + '<h1 class="t-title" data-lines="' + esc(JSON.stringify(data)) + '">' + plain + '</h1></div>';
   }
 
-  function noteHTML(text) { return '<p class="note t-label" data-custom>' + esc(text) + '</p>'; }
-  function ruleHTML(cls) { return '<div class="rule blk ' + (cls || '') + '"></div>'; }
+  function noteHTML(text) { return '<p class="note t-label reveal" data-custom>' + esc(text) + '</p>'; }
+  function ruleHTML(cls) { return '<div class="rule blk reveal ' + (cls || '') + '"></div>'; }
 
   function listHTML(items, cls) {
     return '<ul class="list ' + (cls || '') + '">' + items.map(function (it) {
       var num = it.number ? '<span class="list-num">' + esc(it.number) + '</span>' : '';
       var text = it.lead ? '<span class="list-lead">' + esc(it.lead) + ':</span> ' + esc(it.text) : esc(it.text);
-      return '<li class="list-item blk">' + num + '<span class="list-text t-body">' + text + '</span></li>';
+      return '<li class="list-item blk reveal">' + num + '<span class="list-text t-body">' + text + '</span></li>';
     }).join('') + '</ul>';
   }
 
@@ -99,37 +107,50 @@
 
   var LAYOUTS = {};
 
+  /* Capa: linha de contexto e manchete ocupam a coluna esquerda; o veu suave
+   * atras do texto existe porque o video 1 passa de quase branco a cinza claro
+   * conforme a camera anda, e o titulo precisa de base constante. */
   LAYOUTS.cover = function (c) {
-    return titleHTML(c.title, c.titleAccent) +
-      '<div class="band">' +
-        '<p class="t-support blk">' + esc(c.support) + '</p>' +
-        '<div class="presenter blk">' + c.presenter.map(function (l) { return '<p class="t-label">' + esc(l) + '</p>'; }).join('') + '</div>' +
-      '</div>' +
-      '<div class="footer-line blk"><span class="t-credit">' + esc(c.footerLeft) + '</span><span class="t-credit">' + esc(c.footerRight) + '</span></div>';
+    return '<div class="cover-wash" aria-hidden="true"></div>' +
+      titleHTML(c.title, c.titleAccent, c.eyebrow) +
+      '<div class="band cover-band">' +
+        /* Sem `blk`: quem anima o filete e ruleX() (scaleX). Marcado como
+         * `reveal` so para entrar no ciclo de prep/limpeza. */
+        '<div class="rule cover-rule reveal draw-x"></div>' +
+        '<p class="t-support blk reveal">' + esc(c.support) + '</p>' +
+        '<div class="presenter blk reveal">' + c.presenter.map(function (l) { return '<p class="t-label">' + esc(l) + '</p>'; }).join('') + '</div>' +
+      '</div>';
   };
 
   LAYOUTS['text-list'] = function (c) {
     var html = titleHTML(c.title) + '<div class="band">';
-    if (c.support) html += '<p class="t-support blk">' + esc(c.support) + '</p>';
+    if (c.support) html += '<p class="t-support blk reveal">' + esc(c.support) + '</p>';
     var isKV = c.items.length && c.items[0].label !== undefined;
     if (isKV) {
-      html += '<div class="kv-list">' + c.items.map(function (it) {
-        return '<div class="kv blk" data-custom><span class="kv-label">' + esc(it.label) + '</span><span class="kv-value">' + esc(it.value) + '</span><div class="rule draw-x"></div></div>';
+      /* Lista e total num unico painel de vidro (colunas 1 a 7). */
+      html += '<div class="glass kv-panel reveal"><div class="kv-list">' + c.items.map(function (it) {
+        return '<div class="kv blk reveal" data-custom><span class="kv-label">' + esc(it.label) + '</span><span class="kv-value">' + esc(it.value) + '</span><div class="rule draw-x"></div></div>';
       }).join('');
       if (c.total) {
-        var m = /^([\d.]+)(.*)$/.exec(c.total.value);
-        var val = m ? countHTML(parseInt(m[1].replace(/\./g, ''), 10), {}) + esc(m[2]) : esc(c.total.value);
-        html += '<div class="kv kv-total blk" data-custom><span class="kv-label">' + esc(c.total.label) + '</span><span class="kv-value">' + val + '</span><div class="rule draw-x"></div></div>';
+        /* Destaque do slide: rotulo em display e o numero com gradiente,
+         * seguido da unidade em mono alinhada pela base. */
+        var m = /^([\d.]+)\s*(.*)$/.exec(c.total.value);
+        var alvo = m ? parseInt(m[1].replace(/\./g, ''), 10) : null;
+        var unidade = m ? m[2] : '';
+        var val = (alvo !== null)
+          ? countHTML(alvo, { cls: 'kv-total-num grad-v' }) + (unidade ? '<span class="kv-total-unit">' + esc(unidade) + '</span>' : '')
+          : esc(c.total.value);
+        html += '<div class="kv kv-total blk reveal" data-custom><span class="kv-label">' + esc(c.total.label) + '</span><span class="kv-value">' + val + '</span><div class="rule draw-x"></div></div>';
       }
-      html += '</div>';
+      html += '</div></div>';
     } else {
       html += listHTML(c.items);
     }
     if (c.body) {
       var body = c.alertWord ? esc(c.body).replace(esc(c.alertWord), '<span class="alert-word">' + esc(c.alertWord) + '</span>') : esc(c.body);
-      html += ruleHTML() + '<p class="t-body blk maxw-900">' + body + '</p>';
+      html += ruleHTML() + '<p class="t-body blk maxw-900 reveal">' + body + '</p>';
     }
-    if (c.closing) html += ruleHTML('closing-rule') + '<p class="t-statement blk closing maxw-980">' + esc(c.closing) + '</p>';
+    if (c.closing) html += ruleHTML('closing-rule') + '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>';
     html += '</div>';
     if (c.note) html += noteHTML(c.note);
     return html;
@@ -137,29 +158,33 @@
 
   LAYOUTS['anchor-number'] = function (c) {
     var m = /^(\d+)(%?)$/.exec(c.number);
-    return '<div class="anchor-zone blk" data-custom>' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-anchor grad-v is-drift', suffix: m[2] }) + '</div>' +
-      '<div class="anchor-lines glass">' +
-        '<p class="t-statement blk" data-custom>' + esc(c.line1) + '</p>' +
-        '<p class="t-statement blk" data-custom><span class="grad">' + esc(c.line2) + '</span></p>' +
-      '</div>' +
-      noteHTML(c.note);
+    /* O painel envolve apenas as duas linhas; a nota fica fora dele, no mesmo
+     * fluxo, 24 px abaixo: so assim ela acompanha a altura real do painel. */
+    return '<div class="anchor-zone blk reveal" data-custom>' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-anchor grad-v is-drift', suffix: m[2] }) + '</div>' +
+      '<div class="anchor-stack">' +
+        '<div class="anchor-lines glass reveal">' +
+          '<p class="anchor-line-1 blk reveal" data-custom>' + esc(c.line1) + '</p>' +
+          '<p class="anchor-line-2 blk reveal" data-custom><span class="grad">' + esc(c.line2) + '</span></p>' +
+        '</div>' +
+        '<p class="note anchor-note t-label reveal" data-custom>' + esc(c.note) + '</p>' +
+      '</div>';
   };
 
   LAYOUTS['text-statement'] = function (c) {
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="statements blk" data-custom>' + c.statements.map(function (s) {
+        '<div class="statements blk reveal" data-custom>' + c.statements.map(function (s) {
           return '<p class="t-statement" data-lines="' + esc(JSON.stringify([{ text: s }])) + '">' + esc(s) + '</p>';
         }).join('') + '</div>' +
         ruleHTML() +
-        '<p class="t-body blk maxw-900">' + esc(c.body) + '</p>' +
+        '<p class="t-body blk maxw-900 reveal">' + esc(c.body) + '</p>' +
       '</div>' + noteHTML(c.note);
   };
 
   LAYOUTS.pivot = function (c) {
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<p class="t-support blk">' + esc(c.support) + '</p>' +
+        '<p class="t-support blk reveal">' + esc(c.support) + '</p>' +
         ruleHTML() +
         listHTML(c.items) +
       '</div>';
@@ -175,7 +200,7 @@
         else if (p) rest.push(countHTML(p.n, { prefix: p.prefix, suffix: p.suffix, cls: 'cn' }));
         else rest.push(esc(t));
       });
-      return '<div class="closing-number glass blk" data-custom style="--k: ' + i + '">' +
+      return '<div class="closing-number glass blk reveal" data-custom style="--k: ' + i + '">' +
         '<svg class="arc-wrap" viewBox="0 0 120 120" aria-hidden="true">' +
           '<circle class="arc" cx="60" cy="60" r="46" style="--len: 289"></circle>' +
         '</svg>' +
@@ -183,12 +208,12 @@
         '<p class="t-body cn-label">' + esc(n.label) + '</p></div>';
     }).join('');
     return '<div class="band zone-wide">' +
-        '<div class="closing-numbers" data-fit-width>' + nums + '</div>' +
+        '<div class="closing-numbers reveal" data-fit-width>' + nums + '</div>' +
         ruleHTML() +
-        '<p class="t-statement blk">' + esc(c.statement) + '</p>' +
+        '<p class="t-statement blk reveal">' + esc(c.statement) + '</p>' +
         listHTML(c.nextSteps) +
       '</div>' +
-      '<div class="footer-line blk"><span class="t-credit">' + esc(c.footerLeft) + '</span></div>';
+      '<div class="footer-line blk reveal"><span class="t-credit">' + esc(c.footerLeft) + '</span></div>';
   };
 
   /* Slide 4 */
@@ -212,7 +237,7 @@
     });
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass"><svg class="chart blk" data-custom viewBox="0 0 ' + W + ' ' + y + '" style="aspect-ratio: ' + W + ' / ' + y + '">' + SVG_GRAD + rows + '</svg></div>' +
+        '<div class="glass reveal"><svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + y + '" style="aspect-ratio: ' + W + ' / ' + y + '">' + SVG_GRAD + rows + '</svg></div>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -233,12 +258,12 @@
     var m = /^(\d+)(%?)$/.exec(c.stat.number);
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="timeline-row blk" data-custom>' +
+        '<div class="timeline-row blk reveal" data-custom>' +
           '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + svg + '</svg>' +
-          '<div class="stat glass">' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-stat', suffix: m[2] }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
+          '<div class="stat glass reveal">' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-stat', suffix: m[2] }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
         '</div>' +
-        '<p class="t-body blk maxw-900">' + esc(c.body) + '</p>' +
-        '<p class="t-statement blk closing maxw-980">' + esc(c.closing) + '</p>' +
+        '<p class="t-body blk maxw-900 reveal">' + esc(c.body) + '</p>' +
+        '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -269,23 +294,23 @@
     var target = parseInt(m[1].replace(/\./g, ''), 10);
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass">' +
-          '<svg class="chart blk" data-custom viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + grid + bars + '</svg>' +
+        '<div class="glass reveal">' +
+          '<svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + grid + bars + '</svg>' +
         '</div>' +
-        '<div class="stat-aside blk" data-custom>' + countHTML(target, { tag: 'p', cls: 't-stat', from: 930 }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
-        '<p class="t-statement blk closing maxw-980">' + esc(c.closing) + '</p>' +
+        '<div class="stat-aside blk reveal" data-custom>' + countHTML(target, { tag: 'p', cls: 't-stat', from: 930 }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
+        '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
       '</div>';
   };
 
   /* Slide 11 */
   LAYOUTS['comparison-table'] = function (c) {
     var t = c.table;
-    var rows = '<div class="cmp-row cmp-head blk" data-custom><span></span><span>' + esc(t.columns.current) + '</span><span>' + esc(t.columns.proposal) + '</span><div class="rule draw-x"></div></div>' +
+    var rows = '<div class="cmp-row cmp-head blk reveal" data-custom><span></span><span>' + esc(t.columns.current) + '</span><span>' + esc(t.columns.proposal) + '</span><div class="rule draw-x"></div></div>' +
       t.rows.map(function (r) {
-        return '<div class="cmp-row blk" data-custom><span class="c-label">' + esc(r.label) + '</span><span class="c-current">' + esc(r.current) + '</span><span class="c-proposal">' + esc(r.proposal) + '</span><div class="rule draw-x"></div></div>';
+        return '<div class="cmp-row blk reveal" data-custom><span class="c-label">' + esc(r.label) + '</span><span class="c-current">' + esc(r.current) + '</span><span class="c-proposal">' + esc(r.proposal) + '</span><div class="rule draw-x"></div></div>';
       }).join('');
     return titleHTML(c.title) +
-      '<div class="band zone-wide to-84"><div class="glass"><div class="cmp">' + rows + '</div></div></div>' +
+      '<div class="band zone-wide to-84"><div class="glass reveal"><div class="cmp">' + rows + '</div></div></div>' +
       noteHTML(c.note);
   };
 
@@ -293,11 +318,11 @@
   LAYOUTS['text-two-blocks'] = function (c) {
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="two-blocks">' + c.blocks.map(function (b) {
-          return '<div class="block blk"><p class="t-statement">' + esc(b.heading) + '</p><p class="t-body">' + esc(b.body) + '</p></div>';
+        '<div class="two-blocks reveal">' + c.blocks.map(function (b) {
+          return '<div class="block blk reveal"><p class="t-statement">' + esc(b.heading) + '</p><p class="t-body">' + esc(b.body) + '</p></div>';
         }).join('') + '</div>' +
         ruleHTML('closing-rule') +
-        '<p class="t-statement blk closing maxw-980">' + esc(c.closing) + '</p>' +
+        '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -310,9 +335,9 @@
     var dots = vals.map(function (v, i) { return '<circle class="pop" cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="3" fill="var(--medi-teal)"></circle>'; }).join('');
     var ticks = [min, max].map(function (t) {
       return '<line x1="' + padL + '" y1="' + y(t) + '" x2="' + (W - padR) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"></line>' +
-        '<text x="' + (padL - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-family="var(--font-mono)" font-size="12" fill="var(--ink-muted)">' + t + '</text>';
+        '<text x="' + (padL - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-family="var(--font-mono)" font-size="16" fill="var(--ink-muted)">' + t + '</text>';
     }).join('');
-    var months = vals.map(function (v, i) { return '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink-muted)">M' + (i + 1) + '</text>'; }).join('');
+    var months = vals.map(function (v, i) { return '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-family="var(--font-mono)" font-size="16" fill="var(--ink-muted)">M' + (i + 1) + '</text>'; }).join('');
     return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + ticks + months +
       '<polyline class="draw" points="' + pts + '" fill="none" stroke="var(--medi-teal)" stroke-width="1.5"></polyline>' +
       '<polyline class="redraw" points="' + vals.slice(-2).map(function (v, k) { var i2 = n - 2 + k; return x(i2).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ') + '" fill="none" stroke="var(--medi-teal)" stroke-width="1.5"></polyline>' +
@@ -321,7 +346,7 @@
 
   LAYOUTS['report-mock'] = function (c) {
     var m = c.mock;
-    var sheet = '<div class="mock-wrap blk" data-custom><div class="sheet glass">' +
+    var sheet = '<div class="mock-wrap blk reveal" data-custom><div class="sheet glass reveal">' +
       '<p class="t-credit sheet-head">' + esc(m.header) + '</p>' +
       '<table><thead><tr><th>' + esc(m.columns[0]) + '</th><th class="num">' + esc(m.columns[1]) + '</th><th class="num">' + esc(m.columns[2]) + '</th></tr></thead><tbody>' +
       m.rows.map(function (r) { return '<tr><td>' + esc(r.label) + '</td><td class="num">' + esc(r.a) + '</td><td class="num">' + esc(r.b) + '</td></tr>'; }).join('') +
@@ -333,20 +358,20 @@
       '<div class="band" style="width: calc(900 * var(--s))">' +
         listHTML(c.items) +
         ruleHTML('closing-rule') +
-        '<p class="t-statement blk closing">' + esc(c.closing) + '</p>' +
+        '<p class="t-statement blk closing reveal">' + esc(c.closing) + '</p>' +
       '</div>' + sheet;
   };
 
   /* Slide 17: encerramento. Sem video proprio: o do slide 16 fica congelado
    * no ultimo frame, com zoom lento por CSS e um veu branco atras do logo. */
   LAYOUTS['logo-end'] = function (c) {
-    return '<div class="veil" data-custom></div>' +
+    return '<div class="veil reveal" data-custom></div>' +
       '<div class="logo-end">' +
-        '<span class="logo-end-wrap blk" data-custom>' +
+        '<span class="logo-end-wrap blk reveal" data-custom>' +
           '<img class="logo-end-mark" src="' + esc(c.logo) + '" alt="' + esc(c.logoAlt) + '">' +
           '<span class="logo-end-spec"></span>' +
         '</span>' +
-        '<p class="logo-end-cities t-credit blk" data-custom>' + c.cities.map(function (n) {
+        '<p class="logo-end-cities t-credit blk reveal" data-custom>' + c.cities.map(function (n) {
           return n === c.highlight ? '<span class="grad">' + esc(n) + '</span>' : esc(n);
         }).join('  ·  ') + '</p>' +
       '</div>';
@@ -390,11 +415,11 @@
     }).join('');
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass">' + c.facts.map(function (f) {
-          return '<div class="fact blk" data-custom><p class="t-statement">' + esc(f) + '</p><div class="rule draw-x"></div></div>';
+        '<div class="glass reveal">' + c.facts.map(function (f) {
+          return '<div class="fact blk reveal" data-custom><p class="t-statement">' + esc(f) + '</p><div class="rule draw-x"></div></div>';
         }).join('') + '</div>' +
       '</div>' +
-      '<div class="map-wrap blk" data-custom><svg class="map" viewBox="0 0 ' + W + ' ' + H + '"><path class="state draw" d="' + path + '"></path>' + pins + '</svg></div>' +
+      '<div class="map-wrap blk reveal" data-custom><svg class="map" viewBox="0 0 ' + W + ' ' + H + '"><path class="state draw" d="' + path + '"></path>' + pins + '</svg></div>' +
       noteHTML(c.note);
   };
 
@@ -424,6 +449,11 @@
     var render = LAYOUTS[s.layout];
     sec.innerHTML = render ? render(s.content) : '';
     if (!render) console.error('Layout desconhecido: ' + s.layout);
+    /* Fio de luz e halo entram defasados em cada painel do mesmo slide,
+     * para a borda nao pulsar em bloco. */
+    Array.prototype.forEach.call(sec.querySelectorAll('.glass'), function (g, k) {
+      g.style.setProperty('--orbit-delay', (k * -2.2).toFixed(1) + 's');
+    });
     slidesRoot.appendChild(sec);
     return { index: i, data: s, el: sec };
   });
@@ -432,6 +462,7 @@
   (function buildChrome() {
     var L = DECK.meta.logos;
     logosEl.innerHTML = '<img class="logo-medi" src="' + esc(L.medi.src) + '" alt="' + esc(L.medi.alt) + '">' +
+      '<span class="logo-divisor" aria-hidden="true"></span>' +
       '<img class="logo-prefeitura" src="' + esc(L.prefeitura.src) + '" alt="' + esc(L.prefeitura.alt) + '">';
     var marks = '';
     for (var i = 0; i < TOTAL; i++) marks += '<div class="ruler-mark" style="top:' + (i / (TOTAL - 1) * 100).toFixed(3) + '%"></div>';
@@ -472,8 +503,8 @@
     var n = splitLines(h1);
     if (n > 2) { h1.classList.add('is-64'); n = splitLines(h1); }
     if (n > 2) { h1.classList.remove('is-64'); h1.classList.add('is-58'); n = splitLines(h1); }
-    if (n > 2) report('slide ' + id + ': título com ' + n + ' linhas mesmo a 58 px');
-    else if (h1.classList.contains('is-64') || h1.classList.contains('is-58')) fitReport.push('slide ' + id + ': título a ' + (h1.classList.contains('is-64') ? 64 : 58) + ' px para caber em duas linhas');
+    if (n > 2) report('slide ' + id + ': título com ' + n + ' linhas mesmo no menor degrau');
+    else if (h1.classList.contains('is-64') || h1.classList.contains('is-58')) fitReport.push('slide ' + id + ': título a ' + (h1.classList.contains('is-64') ? 58 : 52) + ' px para caber em duas linhas');
   }
 
   function distribute(s) {
@@ -554,6 +585,24 @@
 
   var ANIM_SEL = '.blk, .tl-in, .fade, .pop, .grow-x, .grow-y, .draw, .pct, .callout, .val-cur, .val-pro, .delta, .seg, .pt-label, .note, .cn-label, .statements > p, .kv-label, .kv-value, .c-label, .c-current, .c-proposal, .list-num, .list-text, .fact > p, .rule, .stat';
 
+  /* Tudo que entra e sai carrega .reveal. A saida seleciona por ela, de modo
+   * que painel de vidro, nota e SVG saiam junto com os blocos de texto. */
+  var REVEAL_SEL = '.reveal';
+
+  /* Molduras estruturais: saem com o slide, mas a entrada nunca as apaga.
+   * Nenhuma CHOREO as anima (elas emolduram o que e animado), entao zera-las
+   * em prep() as deixaria apagadas para sempre. O .veil do 17 e a excecao
+   * declarada: a propria coreografia o levanta de 0 a 0,45.
+   *
+   * O painel de vidro NAO entra nesta lista. Ele pinta uma superficie visivel
+   * (fundo, borda e halo), e o conteudo dele so e revelado em REVEAL_START da
+   * duracao do video: mante-lo opaco desde o corte punha um retangulo vazio na
+   * tela por segundos, dessincronizado do texto. Quem o levanta e glassIn(),
+   * chamado por buildEnter() logo antes da coreografia do slide. As outras tres
+   * molduras nao pintam nada por conta propria, entao a isencao delas nao
+   * aparece em tela. */
+  var MOLDURA_SEL = '.map-wrap, .closing-numbers, .two-blocks';
+
   function clearAnim(el) {
     if (G) G.set(el, { clearProps: 'transform,opacity,strokeDashoffset,strokeDasharray' });
     else { el.style.transform = ''; el.style.opacity = ''; el.style.strokeDashoffset = ''; el.style.strokeDasharray = ''; }
@@ -565,8 +614,13 @@
 
   function prep(s) {
     var sec = s.el;
+    if (G) { G.killTweensOf(sec); G.killTweensOf(Array.prototype.slice.call(sec.querySelectorAll(REVEAL_SEL))); }
     Array.prototype.forEach.call(sec.querySelectorAll(ANIM_SEL), clearAnim);
-    Array.prototype.forEach.call(sec.querySelectorAll('.blk, .tl-in, .fade, .pop, .pct, .callout, .val-cur, .val-pro, .delta, .seg, .pt-label, .note'), function (el) { el.style.opacity = '0'; });
+    Array.prototype.forEach.call(sec.querySelectorAll(REVEAL_SEL), clearAnim);
+    Array.prototype.forEach.call(sec.querySelectorAll('.blk, .tl-in, .fade, .pop, .pct, .callout, .val-cur, .val-pro, .delta, .seg, .pt-label, .note, .reveal'), function (el) {
+      /* A moldura volta a opaca: quem anima e o conteudo dentro dela. */
+      el.style.opacity = el.matches(MOLDURA_SEL) ? '' : '0';
+    });
     Array.prototype.forEach.call(sec.querySelectorAll('.grow-x'), function (el) { rememberAttr(el, 'width'); el.setAttribute('width', 0); });
     Array.prototype.forEach.call(sec.querySelectorAll('.grow-y'), function (el) { rememberAttr(el, 'height'); rememberAttr(el, 'y'); el.setAttribute('y', parseFloat(el.getAttribute('data-y')) + parseFloat(el.getAttribute('data-height'))); el.setAttribute('height', 0); });
     Array.prototype.forEach.call(sec.querySelectorAll('.pop'), function (el) { if (el.tagName.toLowerCase() === 'circle') { rememberAttr(el, 'r'); el.setAttribute('r', 0); } });
@@ -586,21 +640,30 @@
     if (el.hasAttribute('data-' + name)) el.setAttribute(name, el.getAttribute('data-' + name));
   }
 
-  function settle(s) {
+  /* Estado final do conteudo, sem marcar o slide como pronto: os loops
+   * ambientes (.slide-ready) so podem partir quando a revelacao terminar. */
+  function finalState(s) {
     var sec = s.el;
-    /* A timeline viva sobrescreveria os contadores no proximo tique. */
-    if (enterTL && current >= 0 && slides[current] === s) { enterTL.kill(); enterTL = null; }
     Array.prototype.forEach.call(sec.querySelectorAll('.grow-x'), function (el) { restoreAttr(el, 'width'); });
     Array.prototype.forEach.call(sec.querySelectorAll('.grow-y'), function (el) { restoreAttr(el, 'height'); restoreAttr(el, 'y'); });
     Array.prototype.forEach.call(sec.querySelectorAll('.pop'), function (el) { restoreAttr(el, 'r'); });
-    Array.prototype.forEach.call(sec.querySelectorAll(ANIM_SEL), function (el) {
-      clearAnim(el); el.style.opacity = ''; el.style.transform = ''; el.style.strokeDasharray = ''; el.style.strokeDashoffset = '';
+    Array.prototype.forEach.call(sec.querySelectorAll(ANIM_SEL + ', ' + REVEAL_SEL), function (el) {
+      clearAnim(el); el.style.opacity = ''; el.style.strokeDasharray = ''; el.style.strokeDashoffset = '';
+      /* O mock do slide 14 tem escala propria, calculada em scaleSheet():
+       * limpar o transform dele aqui devolveria a folha ao tamanho cheio. */
+      if (!el.classList.contains('mock-wrap')) el.style.transform = '';
     });
+    scaleSheet(s);
     Array.prototype.forEach.call(sec.querySelectorAll('.note'), function (el) { el.style.opacity = '0.7'; });
     Array.prototype.forEach.call(sec.querySelectorAll('.draw.state'), function (el) { el.style.fillOpacity = ''; });
     Array.prototype.forEach.call(sec.querySelectorAll('[data-count]'), function (el) { setCount(el, parseFloat(el.getAttribute('data-count'))); });
     Array.prototype.forEach.call(sec.querySelectorAll('.alert-word'), function (el) { el.classList.add('is-on'); });
-    if (s.data.layout === 'cover' || s.data.layout === 'closing') logosEl.style.opacity = '1';
+  }
+
+  function settle(s) {
+    /* A timeline viva sobrescreveria os contadores no proximo tique. */
+    if (enterTL && current >= 0 && slides[current] === s) { enterTL.kill(); enterTL = null; }
+    finalState(s);
     markReady(s);
   }
 
@@ -701,8 +764,11 @@
         tl.fromTo(el, { attr: { height: 0, y: y0 + hh } }, { attr: { height: hh, y: y0 }, duration: dur, ease: EASE_OUT }, at);
         return at + dur;
       },
+      /* O filete pode ser ele proprio um `.reveal` (capa), e nesse caso prep()
+       * zerou a opacidade dele: quem anima so o scaleX precisa devolve-la. */
       ruleX: function (el, at, dur) {
-        if (RM) { tl.set(el, { scaleX: 1 }, at); return at; }
+        if (RM) { tl.set(el, { scaleX: 1, opacity: 1 }, at); return at; }
+        tl.set(el, { opacity: 1 }, at);
         tl.fromTo(el, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: dur || 0.6, ease: EASE_OUT }, at);
         return at + (dur || 0.6);
       }
@@ -724,11 +790,17 @@
   var CHOREO = {};
 
   CHOREO[1] = function (h, tl, sec) {
-    tl.fromTo(logosEl, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0);
-    var t = h.lines(h.one('.t-title'), 0.3);
-    h.block(h.one('.t-support'), t - 0.35);
-    h.block(h.one('.presenter'), t - 0.1);
-    h.block(h.one('.footer-line'), t + 0.15, { y: 10 });
+    /* Os logos sao persistentes no chrome: a coreografia nao os toca.
+     * O veu entra antes de tudo, para a manchete ja nascer sobre base pronta. */
+    var wash = h.one('.cover-wash');
+    if (wash) {
+      if (RM) tl.fromTo(wash, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'none' }, 0);
+      else tl.fromTo(wash, { opacity: 0 }, { opacity: 1, duration: 1.1, ease: 'power2.out' }, 0);
+    }
+    var t = h.lines(h.one('.t-title'), 0.45, { stagger: 0.12 });
+    h.ruleX(h.one('.cover-rule'), t - 0.3, 0.7);
+    h.block(h.one('.t-support'), t - 0.15);
+    h.block(h.one('.presenter'), t + 0.05);
   };
 
   CHOREO[2] = function (h, tl, sec) {
@@ -750,7 +822,7 @@
 
   CHOREO[3] = function (h, tl, sec) {
     var start = 0.68; /* t = 1.200 ms após a tecla */
-    var lines = h.q('.anchor-lines .t-statement');
+    var lines = [h.one('.anchor-line-1'), h.one('.anchor-line-2')];
     h.block(h.one('.anchor-zone'), start, { y: 0, dur: 0.4 });
     var end = h.count(h.one('.t-anchor'), start, 1.4);
     h.block(lines[0], start + 0.2);
@@ -942,7 +1014,6 @@
     h.block(h.one('.band > .t-statement'), 1.8);
     h.block(h.q('.list-item'), 2.0, { stagger: 0.09 });
     h.block(h.one('.footer-line'), 2.4, { y: 10 });
-    tl.fromTo(logosEl, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 2.6);
   };
 
   CHOREO[17] = function (h, tl, sec) {
@@ -961,21 +1032,79 @@
     tl.to(cities, { opacity: 1, duration: RM ? 0.3 : 0.6, ease: 'power2.out' }, 2.1);
   };
 
-  function buildEnter(s) {
+  /* immediate: volta ou video ja no fim. A coreografia da o lugar a uma
+   * revelacao unica de 400 ms, com stagger de 30 ms, sem esperar nada. */
+  function buildEnter(s, immediate) {
     var tl = G.timeline({ paused: true });
+    if (immediate) {
+      var alvos = Array.prototype.slice.call(s.el.querySelectorAll(REVEAL_SEL));
+      /* Crava o estado final (contadores, barras, tracos) sem marcar pronto:
+       * os loops so podem partir quando a revelacao terminar. */
+      finalState(s);
+      if (RM) tl.fromTo(alvos, { opacity: 0 }, { opacity: 1, duration: BACK_REVEAL_MS / 1000, ease: 'none', stagger: BACK_STAGGER }, 0);
+      else tl.fromTo(alvos, { opacity: 0, y: 8 * S() }, { opacity: 1, y: 0, duration: BACK_REVEAL_MS / 1000, ease: 'power2.out', stagger: BACK_STAGGER }, 0);
+      return tl;
+    }
     var h = helpers(tl, s.el);
+    glassIn(tl, s.el);
     var fn = CHOREO[s.data.id];
     if (fn) fn(h, tl, s.el); else genericEnter(h, tl, s.el);
     return tl;
   }
 
+  /* O painel de vidro materializa antes do conteudo que carrega: prep() o
+   * zerou, e aqui ele sobe no inicio da timeline, um pouco a frente do texto.
+   * Sem esta subida o painel ficaria apagado para sempre, porque nenhuma
+   * CHOREO o toca. A defasagem de 60 ms entre paineis do mesmo slide segue a
+   * ordem do DOM, igual ao --orbit-delay do fio de luz.
+   *
+   * Cuidado ao mexer: paineis aninhados num bloco ja animado (o .stat do 6, a
+   * .sheet do 14) sobem junto com o bloco pai; levanta-los aqui tambem so
+   * antecipa a opacidade deles, nunca os anima duas vezes, porque este tween
+   * termina antes de o pai comecar. */
+  function glassIn(tl, sec) {
+    var paineis = Array.prototype.slice.call(sec.querySelectorAll('.glass'));
+    if (!paineis.length) return;
+    paineis.forEach(function (g, k) {
+      var at = k * 0.06;
+      if (RM) { tl.to(g, { opacity: 1, duration: 0.3, ease: 'none' }, at); return; }
+      tl.fromTo(g, { opacity: 0 }, { opacity: 1, duration: 0.55, ease: 'power2.out' }, at);
+    });
+  }
+
+  /* Esconde e zera o slide que sai. Chamada pelo onComplete da saida no caso
+   * normal, e diretamente por goTo() quando a saida e morta antes de terminar.
+   *
+   * Tem de ser idempotente e independente da timeline: kill() do GSAP nao
+   * dispara onComplete, entao deixar o desligamento so no callback significa
+   * que qualquer navegacao chegando dentro dos EXIT_MS deixa o slide anterior
+   * aceso para sempre, sobreposto ao novo. O hash escrito em goTo() dispara
+   * hashchange, que re-entra com { force: true } e passa por cima do lock:
+   * o caminho rapido existe de verdade. */
+  function hideSlide(s) {
+    if (!s) return;
+    s.el.classList.remove('is-active');
+    s.el.setAttribute('aria-hidden', 'true');
+    prep(s);
+  }
+
+  /* Saida: anima TODO descendente marcado com .reveal (painel de vidro, nota
+   * e SVG inclusive), nao so os blocos de texto. Antes de comecar, mata os
+   * tweens e loops vivos do slide, senao um gradiente ou especular em curso
+   * segura o elemento aceso dentro do slide seguinte. */
   function buildExit(s) {
     var tl = G.timeline({ paused: true });
     var px = S();
-    var blocks = Array.prototype.slice.call(s.el.querySelectorAll('.blk')).reverse();
-    if (RM) tl.to(blocks, { opacity: 0, duration: 0.3, ease: 'none' }, 0);
-    else tl.to(blocks, { opacity: 0, y: -10 * px, duration: EXIT_MS / 1000, ease: EASE_IN, stagger: 0.03 }, 0);
-    if (s.data.layout === 'cover' || s.data.layout === 'closing') tl.to(logosEl, { opacity: 0, duration: 0.26 }, 0);
+    var alvos = Array.prototype.slice.call(s.el.querySelectorAll(REVEAL_SEL));
+    G.killTweensOf(s.el);
+    G.killTweensOf(alvos);
+    s.el.classList.remove('slide-ready');
+    var saida = alvos.slice().reverse();
+    if (RM) tl.to(saida, { opacity: 0, duration: 0.3, ease: 'none' }, 0);
+    else tl.to(saida, { opacity: 0, y: -10 * px, duration: EXIT_MS / 1000, ease: EASE_IN, stagger: 0.03 }, 0);
+    /* Esconder so quando a saida termina, nunca por tempo fixo; e zerar o
+     * slide para que uma entrada futura nao encontre residuo. */
+    tl.eventCallback('onComplete', function () { hideSlide(s); exitSlide = null; });
     return tl;
   }
 
@@ -1032,6 +1161,26 @@
     setTimeout(fin, 600);
   }
 
+  /* Todo play() passa por aqui: a taxa some quando o src troca. */
+  function playVideo(v) {
+    if (!v) return;
+    try { v.playbackRate = VIDEO_RATE; } catch (e) { /* ignorado */ }
+    var p = v.play();
+    if (p && p.catch) p.catch(function () { /* autoplay bloqueado: fica no primeiro frame */ });
+  }
+
+  /* Duracao efetiva: o que o espectador realmente espera, ja com a taxa. */
+  function effectiveDuration(v) {
+    var dur = (v && isFinite(v.duration) && v.duration > 1) ? v.duration : VIDEO_FALLBACK_S;
+    return dur / VIDEO_RATE;
+  }
+
+  /* O vídeo está parado no último frame (volta, ou fim de reprodução). */
+  function atLastFrame(v) {
+    if (!v || !isFinite(v.duration) || v.duration <= 0) return false;
+    return v.paused && v.currentTime >= v.duration - 0.12;
+  }
+
   function setFront(k) {
     front = k;
     vids.forEach(function (v, i) { v.classList.toggle('is-front', i === k); });
@@ -1076,7 +1225,7 @@
     loadInto(back, i);
     if (dir === 1) {
       whenReady(v, function () {
-        var p = v.play(); if (p && p.catch) p.catch(function () { /* autoplay bloqueado: fica no primeiro frame */ });
+        playVideo(v);
         setFront(back);
         old.pause();
         preloadBack(i + 1);
@@ -1100,7 +1249,7 @@
     }
     whenReady(v, function () {
       seekTo(v, 0, function () {
-        var p = v.play(); if (p && p.catch) p.catch(function () { /* */ });
+        playVideo(v);
         setFront(back);
         old.pause();
         preloadBack(i + 1);
@@ -1117,6 +1266,9 @@
   var locked = false;
   var enterTL = null;
   var exitTL = null;
+  /* Slide cuja saida esta em curso. Guardado a parte da timeline porque e
+   * preciso desliga-lo mesmo quando a timeline morre sem completar. */
+  var exitSlide = null;
   var pending = [];
   var revealPending = false;
   var startEnterNow = function () {};
@@ -1146,12 +1298,11 @@
     stage.classList.remove('slide-ready');
   }
 
+  /* Liga o slide novo sem desligar o anterior: quem o desliga e o onComplete
+   * da saida. Desligar aqui cortaria a saida no primeiro frame. */
   function showSlide(s) {
-    slides.forEach(function (o) {
-      var on = o === s;
-      o.el.classList.toggle('is-active', on);
-      o.el.setAttribute('aria-hidden', on ? 'false' : 'true');
-    });
+    s.el.classList.add('is-active');
+    s.el.setAttribute('aria-hidden', 'false');
     stage.setAttribute('data-slide', s.data.id);
   }
 
@@ -1162,7 +1313,10 @@
     revealPending = false;
     clearPending();
     if (enterTL) { enterTL.kill(); enterTL = null; }
+    /* Matar a saida pula o onComplete dela: desliga o slide na mao, senao ele
+     * fica aceso por cima do proximo. */
     if (exitTL) { exitTL.kill(); exitTL = null; }
+    if (exitSlide) { hideSlide(exitSlide); exitSlide = null; }
 
     var prev = current >= 0 ? slides[current] : null;
     var next = slides[index];
@@ -1175,7 +1329,6 @@
     /* t = 0: vídeo do próximo entra; régua se move; texto atual sai. */
     clearReady();
     moveRuler(index);
-    var mediaCb = null;
     if (!opts.initial) switchVideo(index, dir);
     else {
       setFront(front);
@@ -1189,24 +1342,29 @@
     }
 
     if (prev && G) {
+      exitSlide = prev;
       exitTL = buildExit(prev);
       exitTL.play();
     } else if (prev) {
-      prep(prev);
+      hideSlide(prev);
     }
 
-    /* O texto entra em 55% da duracao do video (45% no slide 3) e termina
-     * antes de 90%, para a camera assentar com o texto ja em repouso. */
+    /* O slide entra em estado preparado e ja visivel: o que espera a camera
+     * e a revelacao do conteudo, nao a troca de slide. */
+    prep(next);
+    showSlide(next);
+
+    var win = revealWindow(next, dir);
+
+    /* O texto entra em REVEAL_START da duracao efetiva e termina antes de
+     * REVEAL_END, para a camera assentar com o texto ja em repouso. Na volta,
+     * entra de imediato. */
     var startEnter = function () {
       revealPending = false;
       if (current !== index) return;
-      if (prev) { prep(prev); }
-      prep(next);
-      showSlide(next);
       if (!G) { settle(next); return; }
-      enterTL = buildEnter(next);
+      enterTL = buildEnter(next, win.immediate);
       enterTL.eventCallback('onComplete', function () { markReady(next); });
-      var win = revealWindow(next);
       if (enterTL.duration() * 1000 > win.budget && win.budget > 400) {
         enterTL.timeScale(enterTL.duration() * 1000 / win.budget);
       }
@@ -1214,9 +1372,7 @@
     };
     startEnterNow = startEnter;
 
-    /* O slide ativo mostra o chrome de imediato; o texto espera a camera. */
-    if (prev) {
-      var win = revealWindow(next);
+    if (prev && !win.immediate) {
       var espera = Math.max(ENTER_DELAY_MS, win.delay);
       revealPending = true;
       later(startEnter, espera);
@@ -1225,11 +1381,15 @@
     }
   }
 
-  /* Janela de revelacao a partir da duracao real do video do slide. */
-  function revealWindow(s) {
-    if (!s.data.video) return { delay: ENTER_DELAY_MS, budget: 4000 };
+  /* Janela de revelacao a partir da duracao efetiva do video do slide.
+   * Voltar, ou encontrar o video ja no ultimo frame, dispensa a espera pela
+   * camera: nao ha movimento a acompanhar, e a tela ficaria vazia. */
+  function revealWindow(s, dir) {
     var v = vids[front];
-    var dur = (v && isFinite(v.duration) && v.duration > 1) ? v.duration : VIDEO_FALLBACK_S;
+    if (dir === -1 || !s.data.video || atLastFrame(v)) {
+      return { delay: 0, budget: BACK_REVEAL_MS, immediate: true };
+    }
+    var dur = effectiveDuration(v);
     var startFrac = (s.data.id === 3) ? REVEAL_START_S3 : REVEAL_START;
     return { delay: dur * startFrac * 1000, budget: dur * (REVEAL_END - startFrac) * 1000 };
   }
@@ -1381,7 +1541,7 @@
       layoutAll();
       slides.forEach(prep);
       setFront(0);
-      var p = v.play(); if (p && p.catch) p.catch(function () { /* */ });
+      playVideo(v);
       preloadBack(startIndex + 1);
       curtain.classList.add('is-hidden');
       goTo(startIndex, { initial: true, force: true });

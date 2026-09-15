@@ -644,7 +644,10 @@ html, body {
 .slide[data-layout="map"] .band > .glass {
   flex-direction: column;
   align-self: flex-start;
-  width: min(100%, calc(980 * var(--s)));
+  /* A largura e ditada pela legenda mais longa ("medicos titulados laudando
+   * para toda a rede"), que cabe em uma linha ate aqui. Abaixo disto ela
+   * quebra e a coluna de figuras perde o alinhamento com o titulo. */
+  width: min(100%, calc(880 * var(--s)));
 }
 
 .fact {
@@ -679,13 +682,20 @@ html, body {
  * `color` aqui apagaria o gradiente do primeiro fato. */
 .fact-fig:not(.grad-v) { color: var(--ink); }
 
-/* "Mensal" nao e numeral: entra no corpo da legenda, alinhado a direita com
- * as figuras, para a coluna nao ganhar uma quarta medida tipografica. */
+/* "Mensal" nao e numeral: e cadencia. Nao pode competir com 96 px nem
+ * sumir a 30 px — a 4 m a terceira linha desaparecia. Fica em 44 px, um
+ * degrau claro abaixo da figura e claramente acima da legenda, em tinta
+ * cheia para igualar o peso optico que os numerais ganham do corpo. */
 .fact-fig.is-word {
-  font-size: calc(30 * var(--s));
-  letter-spacing: 0.02em;
-  color: var(--ink-body);
+  font-size: calc(44 * var(--s));
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
+
+/* A figura de palavra assenta na base pelo proprio glifo; a de numeral, com
+ * line-height 1, assenta pelo corpo. Sem este ajuste "Mensal" flutuava acima
+ * da linha de base das legendas no grid `align-items: baseline`. */
+.fact:last-child .fact-row { align-items: center; }
 
 .fact-text {
   font-family: var(--font-sans);
@@ -703,8 +713,17 @@ html, body {
   width: auto;
 }
 
-/* Subtracao: o filete fecha o grupo, nao separa itens. O ultimo sai. */
-.fact:last-child { padding-bottom: 0; }
+/* Subtracao: o filete fecha o grupo, nao separa itens. O ultimo sai.
+ *
+ * O respiro, porem, fica — e simetrico. As duas primeiras linhas sao altas
+ * (figura de 96 px) e o filete as separa; a terceira e baixa, e so com
+ * padding embaixo ela encostava no filete de cima enquanto todo o ar
+ * sobrava por baixo. O mesmo compasso acima e abaixo devolve a cadencia. */
+.fact:last-child {
+  padding-top: var(--g24);
+  padding-bottom: var(--g24);
+}
+
 .fact:last-child .rule { display: none; }
 
 /* ---------- Capa ---------- */

@@ -943,9 +943,44 @@ html, body {
 }
 
 .chart .lbl { font-size: 24px; fill: var(--ink); }
+
+/* Slide 12: os tres degraus de leitura do grafico. O valor da proposta e a
+ * conclusao (tinta cheia, tabular), o atual e a referencia (cinza do par
+ * semantico) e o delta e o que se le primeiro, em verde-agua. */
+.chart .val-pro {
+  font-size: 19px;
+  font-weight: 500;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .val-cur {
+  font-size: 17px;
+  fill: var(--current);
+  font-variant-numeric: tabular-nums;
+}
+
+/* O delta e numero medido, mas "novo serviço" e prosa: mono so no numerico,
+ * senao o rotulo da densitometria vira etiqueta tecnica sem motivo. */
+.chart .delta {
+  font-size: 19px;
+  font-weight: 500;
+  fill: var(--medi-teal);
+}
+
+.chart .delta.is-num {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
 .chart .grad-svg { fill: url(#gradTeal); }
 .chart .lbl-soft { font-size: 24px; fill: var(--ink-soft); }
-.chart .axis { stroke: var(--line); stroke-width: 1; fill: none; }
+.chart .axis {
+  stroke: var(--line);
+  stroke-width: 1;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
 .chart .bar-cap { fill: var(--line); }
 .chart .bar-cur { fill: var(--current); }
 .chart .bar-pro { fill: var(--proposal); }
@@ -1006,16 +1041,42 @@ html, body {
   min-height: 0;
 }
 
-/* No slide 12 o painel se ajusta ao desenho, sem area morta. */
+/* No slide 12 o painel acompanha a faixa: o grafico e o elemento principal
+ * e nao cabe mais encolher o vidro em volta de um desenho pequeno.
+ *
+ * O teto de 852 px de palco e o que segura o vidro antes da carcaca do
+ * tomografo: a zona segura de 0,62 vale para texto solto, mas o painel e
+ * uma superficie opaca — levado a faixa inteira, o terco direito dele
+ * assentava por cima da maquina. */
 .slide[data-layout="bars-grouped"] .band > .glass {
-  width: auto;
+  width: min(100%, calc(852 * var(--s)));
   align-self: flex-start;
+  /* O painel e dimensionado pela proporcao do proprio desenho: o SVG entra
+   * como bloco de largura cheia e a altura sai do viewBox. Sem isto o vidro
+   * ganhava altura propria e sobrava faixa morta em volta do grafico.
+   *
+   * `flex: 0 0 auto` e `min-height: auto` impedem que a faixa (flex column)
+   * encolha o vidro abaixo da altura do grafico: era isso que recortava os
+   * rotulos de modalidade na base em 1920x1080, e nao um teto de altura. */
+  display: block;
+  aspect-ratio: auto;
+  max-height: none;
+  flex: 0 0 auto;
+  min-height: auto;
 }
 
+/* O grafico e o argumento do slide 12, nao um apoio: ocupa a faixa segura
+ * inteira em vez do recorte de 560 px que o mantinha do tamanho de um
+ * thumbnail. O painel deixa de encolher em volta dele (width: auto, adiante)
+ * e passa a acompanhar a faixa. */
+/* O desenho encaixa no painel: largura cheia, altura derivada do viewBox.
+ * O vidro entao se molda ao grafico (display: block acima), em vez de o
+ * grafico boiar dentro de um vidro com altura propria. */
 .slide[data-layout="bars-grouped"] .band > .glass > .chart {
-  width: calc(560 * var(--s));
-  height: auto;
-  aspect-ratio: 672 / 340 !important;
+  display: block;
+  width: 100%;
+  height: auto !important;
+  aspect-ratio: auto !important;
 }
 
 /* O grafico ocupa o painel inteiro e respeita a altura, sem corte. */
@@ -1026,8 +1087,14 @@ html, body {
   min-height: 0;
 }
 
-/* Em telas baixas o par grafico + apoio precisa de menos altura. */
-.slide[data-layout="bars-grouped"] .band > .glass { max-height: 62%; }
+/* O painel do grafico cede o resto da faixa para o numero de apoio e o
+ * fechamento. Sem o teto, o desenho de 1180x470 empurrava os dois para fora
+ * da faixa e distribute() reportava estouro mesmo no piso de --grow. */
+/* Sem teto de altura: o painel se molda ao grafico. Um max-height aqui
+ * recortava o vidro enquanto o SVG mantinha a altura do viewBox, e o corte
+ * comia os rotulos de modalidade na base. Quem segura a faixa e o proprio
+ * desenho, via proporcao do viewBox. */
+.slide[data-layout="bars-grouped"] .band > .glass { max-height: none; }
 
 @media (max-height: 820px) {
   .stat-aside .t-stat { font-size: calc(var(--fs-stat) * 0.46); }
@@ -1035,27 +1102,8 @@ html, body {
    * que a fonte anterior, e a faixa e a mesma. */
   .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.78); line-height: 1.3; }
   .glass { padding: calc(24 * var(--s)); }
-  .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
+  .slide[data-layout="bars-grouped"] .band > .glass { max-height: none; }
   .slide[data-layout="bars-grouped"] .band { gap: var(--g16); }
-}
-
-
-/* O grafico ocupa o painel inteiro e respeita a altura, sem corte. */
-.band > .glass > .chart {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: auto !important;
-  min-height: 0;
-}
-
-/* Em telas baixas o par grafico + apoio precisa de menos altura. */
-.slide[data-layout="bars-grouped"] .band > .glass { max-height: 62%; }
-
-@media (max-height: 820px) {
-  .stat-aside .t-stat { font-size: calc(var(--fs-stat) * 0.46); }
-  .stat-aside .t-body { font-size: calc(var(--fs-body) * 0.86); }
-  .glass { padding: calc(24 * var(--s)); }
-  .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
 }
 
 .stat {
@@ -1515,6 +1563,36 @@ html, body {
 
 /* ---------- Dois blocos (slide 13) ---------- */
 
+/* O painel empilha: par de blocos, filete, fechamento. Sem isto a regra
+ * `.band > .glass { display: flex }` deitaria os tres lado a lado. */
+.duo-panel {
+  flex-direction: column;
+  align-self: flex-start;
+  gap: var(--g32);
+  /* O painel nao passa da zona segura: a faixa ja e min(--zone, zona segura),
+   * e `.band > .glass` da 100% dela. Com o padding contado por box-sizing, o
+   * conteudo assenta dentro do vidro em vez de vazar pela direita. */
+  width: 100%;
+}
+
+/* O fechamento e a conclusao do slide, nao um terceiro bloco: fica no tom
+ * cheio da tinta enquanto os corpos acima ficam em --ink-body.
+ *
+ * O `max-width` de .maxw-980 vale --zone (976 px de palco), medida da FAIXA.
+ * Dentro do painel sobra a faixa menos 80 px de padding, entao aquele teto
+ * fica maior que a caixa e a ultima palavra saia cortada na borda direita.
+ * Aqui a coluna do painel manda. */
+.duo-panel > .closing {
+  margin-top: 0;
+  color: var(--ink);
+  max-width: none;
+  align-self: stretch;
+}
+
+/* Dentro do vidro o corpo nao disputa mais com o frame: volta para a tinta
+ * plena, que sobre o painel claro fica bem acima do minimo de contraste. */
+.duo-panel .t-body { color: var(--ink-soft); }
+
 .two-blocks {
   display: flex;
   gap: var(--g48);
@@ -1527,6 +1605,10 @@ html, body {
   flex-direction: column;
   gap: var(--g16);
 }
+
+/* A coluna do bloco manda na medida: um `max-width` herdado encolheria a
+ * segunda coluna e desalinharia o par. */
+.two-blocks .block .t-body { max-width: none; }
 
 /* ---------- Mockup do relatório (slide 14) ---------- */
 

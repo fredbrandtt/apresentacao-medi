@@ -46,10 +46,11 @@ window.DECK = {
         title: ['Da ociosidade', 'à resolutividade'],
         titleAccent: 2,
         support: 'Proposta de gestão médica para o serviço de radiologia e diagnóstico por imagem do município',
-        /* Credencial do apresentador: discreta, abaixo do apoio. O nome entra
-         * na hora da reuniao; o que sustenta a capa e o registro profissional. */
+        /* Credencial do apresentador: discreta, abaixo do apoio. O nome
+         * encabeça, e o registro profissional sustenta a capa logo abaixo. */
         presenter: [
-          'CRM-MA [número]  ·  RQE [número]',
+          'Gabriel Nunes Bacelar',
+          'CRM-MA 7464  ·  RQE 4203',
           'Coordenação médica, MEDI Medicina Diagnóstica'
         ],
         logos: true
@@ -203,7 +204,6 @@ window.DECK = {
           '18 médicos titulados laudando para toda a rede',
           'Relatório mensal auditado em todas as unidades'
         ],
-        note: 'Laudo eletivo em Paulo Ramos: [X dias úteis], conforme relatório mensal entregue ao contratante.',
         map: {
           points: [
             { name: 'São Luís', lat: -2.53, lon: -44.30, kind: 'active', sub: 'Radiologia do grupo Athena Saúde (Humana, Unihosp, Medplan)' },
@@ -296,7 +296,7 @@ window.DECK = {
       video: 'public/videos_1080p/13.mp4',
       videoFreeze: 6.0,
       content: {
-        title: 'Resolver aqui o que hoje viaja.',
+        title: 'Resolver aqui o que hoje precisa de deslocamento.',
         blocks: [
           {
             heading: 'Tomografia com contraste',
@@ -307,8 +307,7 @@ window.DECK = {
             body: '60 exames por mês, com capacidade para 300. Investigação de osteoporose e prevenção de fratura em idosos, sem sair do município.'
           }
         ],
-        closing: 'Cada exame resolvido aqui é um deslocamento por TFD que o município deixa de pagar.',
-        note: '[Custo médio de um deslocamento por TFD para São Luís: R$ X, se disponível]'
+        closing: 'Cada exame resolvido aqui é um deslocamento por TFD que o município deixa de pagar.'
       }
     },
 

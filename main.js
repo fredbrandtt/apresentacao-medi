@@ -94,7 +94,13 @@
     return '<div class="title-zone blk reveal" data-custom>' + top + '<h1 class="t-title" data-lines="' + esc(JSON.stringify(data)) + '">' + plain + '</h1></div>';
   }
 
-  function noteHTML(text) { return '<p class="note t-label reveal" data-custom>' + esc(text) + '</p>'; }
+  /* Nota e opcional: sem ela o helper devolve string vazia. Sem esta guarda,
+   * esc(undefined) imprimia a palavra "undefined" no rodape do slide, porque
+   * esc() faz String(s). Slides sem `note` em data.js dependem disto. */
+  function noteHTML(text) {
+    if (!text) return '';
+    return '<p class="note t-label reveal" data-custom>' + esc(text) + '</p>';
+  }
   function ruleHTML(cls) { return '<div class="rule blk reveal ' + (cls || '') + '"></div>'; }
 
   function listHTML(items, cls) {
@@ -421,13 +427,28 @@
 
   /* Slide 12 */
   LAYOUTS['bars-grouped'] = function (c) {
-    var W = 672, H = 340, padL = 56, padT = 60, padB = 40, plotH = H - padT - padB, plotW = W - padL;
-    var groups = c.chart.groups, max = c.chart.axisMax, gw = plotW / groups.length, bw = 36, gap = 8;
+    /* O viewBox e 1:1 com o palco e o desenho ocupa a faixa segura inteira:
+     * era o recorte estreito, centrado num painel largo, que deixava as
+     * laterais mortas. A largura do par de barras e derivada da canaleta
+     * (gw), e nao fixa, de modo que o grafico cresce com o palco em vez de
+     * boiar no meio dele. padT abre a faixa dos deltas; padB acomoda o
+     * rotulo da modalidade. */
+    /* A proporcao do viewBox e casada com a area interna do painel
+     * (852 x 300 de palco, menos 40 de padding em cada lado = 772 x 220,
+     * ou 3,509:1). Com W = 1180, H = 1180 / 3,509 = 336. Assim o `meet` do
+     * SVG nao tem letterbox para criar: o desenho preenche o painel sem
+     * faixa morta e sem precisar esticar o viewBox, que deformaria o texto. */
+    var W = 1180, H = 336, padL = 74, padR = 20, padT = 62, padB = 46;
+    var plotH = H - padT - padB, plotW = W - padL - padR;
+    var groups = c.chart.groups, max = c.chart.axisMax, gw = plotW / groups.length;
+    /* Par de barras ocupando 62% da canaleta: cheio o bastante para ter
+     * presenca, com respiro suficiente entre modalidades. */
+    var gap = Math.round(gw * 0.05), bw = Math.round((gw * 0.62 - gap) / 2);
     function yOf(v) { return padT + plotH - (v / max) * plotH; }
     var grid = [0, 200, 400, 600].filter(function (t) { return t <= max; }).map(function (t) {
       var y = yOf(t);
-      return '<line class="axis fade" x1="' + padL + '" y1="' + y + '" x2="' + W + '" y2="' + y + '"></line>' +
-        '<text class="mono fade" x="' + (padL - 12) + '" y="' + (y + 5) + '" text-anchor="end">' + fmt(t) + '</text>';
+      return '<line class="axis fade" x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '"></line>' +
+        '<text class="mono fade" x="' + (padL - 16) + '" y="' + (y + 6) + '" text-anchor="end">' + fmt(t) + '</text>';
     }).join('');
     var bars = groups.map(function (g, i) {
       var cx = padL + gw * i + gw / 2, xa = cx - bw - gap / 2, xb = cx + gap / 2;
@@ -438,7 +459,9 @@
       s += '<rect class="bar-pro grow-y" x="' + xb + '" y="' + yb + '" width="' + bw + '" height="' + (yOf(0) - yb) + '"></rect>';
       s += '<rect class="bar-glow" x="' + xb + '" y="' + yb + '" width="' + bw + '" height="1" fill="#FFFFFF" opacity="0.25"></rect>';
       s += '<text class="mono val-pro" x="' + (xb + bw / 2) + '" y="' + (yb - 8) + '" text-anchor="middle">' + fmt(g.proposal) + '</text>';
-      s += '<text class="lbl delta" x="' + cx + '" y="' + (top - 34) + '" text-anchor="middle">' + esc(g.delta) + '</text>';
+      /* "+65%" e numero medido (mono, tabular); "novo serviço" e prosa. */
+      var deltaNum = /\d/.test(String(g.delta)) ? ' is-num' : '';
+      s += '<text class="lbl delta' + deltaNum + '" x="' + cx + '" y="' + (top - 34) + '" text-anchor="middle">' + esc(g.delta) + '</text>';
       s += '<text class="mono fade" x="' + cx + '" y="' + (H - 10) + '" text-anchor="middle">' + esc(g.label) + '</text>';
       return s + '</g>';
     }).join('');
@@ -447,7 +470,7 @@
     return titleHTML(c.title) +
       '<div class="band">' +
         '<div class="glass reveal">' +
-          '<svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + grid + bars + '</svg>' +
+          '<svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">' + grid + bars + '</svg>' +
         '</div>' +
         '<div class="stat-aside blk reveal" data-custom>' + countHTML(target, { tag: 'p', cls: 't-stat', from: 930 }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
         '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
@@ -466,15 +489,22 @@
       noteHTML(c.note);
   };
 
-  /* Slide 13 */
+  /* Slide 13
+   * Os dois blocos e o fechamento assentam sobre o mesmo painel de vidro dos
+   * demais slides. Era o unico layout de texto corrido que caia direto no
+   * frame: o video 13 tem a gantry em cinza medio bem no meio da zona segura,
+   * e o corpo em --ink-body sumia nela. O vidro e o material ja estabelecido
+   * do deck — trazer o slide para dentro dele, e nao inventar caixa nova. */
   LAYOUTS['text-two-blocks'] = function (c) {
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="two-blocks reveal">' + c.blocks.map(function (b) {
-          return '<div class="block blk reveal"><p class="t-statement">' + esc(b.heading) + '</p><p class="t-body">' + esc(b.body) + '</p></div>';
-        }).join('') + '</div>' +
-        ruleHTML('closing-rule') +
-        '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
+        '<div class="glass duo-panel reveal">' +
+          '<div class="two-blocks">' + c.blocks.map(function (b) {
+            return '<div class="block blk reveal"><p class="t-statement">' + esc(b.heading) + '</p><p class="t-body">' + esc(b.body) + '</p></div>';
+          }).join('') + '</div>' +
+          ruleHTML('closing-rule') +
+          '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
+        '</div>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -591,7 +621,7 @@
         }).join('') + '</div>' +
       '</div>' +
       '<div class="map-wrap blk reveal" data-custom><svg class="map" viewBox="0 0 ' + W + ' ' + H + '"><path class="state draw" d="' + path + '"></path>' + pins + '</svg></div>' +
-      noteHTML(c.note);
+      (c.note ? noteHTML(c.note) : '');
   };
 
   /* ------------------------------------------------------------------ */

@@ -10,6 +10,11 @@
  * - `title` pode ser string ou array de linhas. `titleAccent` é a linha
  *   que recebe --medi-teal (apenas na capa).
  * - `video`: caminho relativo ao index.html (stack estática, sem servidor).
+ * - `videoFreeze`: segundo em que o vídeo congela ao terminar, em tempo de
+ *   arquivo (antes da aceleração). Existe só nos vídeos cujo assunto sai de
+ *   quadro antes do fim: sem ele o slide congelaria numa parede clara, que
+ *   foi o defeito relatado. Os demais omitem o campo e param no último
+ *   frame. Medido quadro a quadro, não estimado: ao trocar um vídeo, remedir.
  * - `credits: false` oculta a linha de créditos persistente (slides 1 e 16).
  */
 
@@ -149,6 +154,7 @@ window.DECK = {
       layout: 'text-list',
       safeRight: 0.66,
       video: 'public/videos_1080p/7.mp4',
+      videoFreeze: 6.0,
       content: {
         title: 'Hoje o município está exposto sem saber.',
         items: [
@@ -166,6 +172,7 @@ window.DECK = {
       layout: 'pivot',
       safeRight: 0.62,
       video: 'public/videos_1080p/8.mp4',
+      videoFreeze: 6.0,
       content: {
         title: 'O que falta não é equipamento.',
         support: 'Falta gestão médica qualificada, regularidade legal e velocidade de laudo.',
@@ -185,6 +192,7 @@ window.DECK = {
       layout: 'map',
       safeRight: 1,
       video: 'public/videos_1080p/9.mp4',
+      videoFreeze: 5.0,
       content: {
         title: 'Lago da Pedra entra numa rede que já funciona.',
         facts: [
@@ -211,6 +219,7 @@ window.DECK = {
       layout: 'text-list',
       safeRight: 0.52,
       video: 'public/videos_1080p/10.mp4',
+      videoFreeze: 6.0,
       content: {
         title: 'Laudo de subespecialista, no interior, no prazo.',
         items: [
@@ -231,6 +240,7 @@ window.DECK = {
       layout: 'comparison-table',
       safeRight: 0.66,
       video: 'public/videos_1080p/11.mp4',
+      videoFreeze: 6.0,
       content: {
         title: 'Mesma estrutura. Nova gestão médica.',
         table: {
@@ -281,6 +291,7 @@ window.DECK = {
       layout: 'text-two-blocks',
       safeRight: 0.52,
       video: 'public/videos_1080p/13.mp4',
+      videoFreeze: 6.0,
       content: {
         title: 'Resolver aqui o que hoje viaja.',
         blocks: [
@@ -304,6 +315,7 @@ window.DECK = {
       layout: 'report-mock',
       safeRight: 1,
       video: 'public/videos_1080p/14.mp4',
+      videoFreeze: 6.5,
       content: {
         title: 'Dados para cobrar, comprovar e prestar contas.',
         items: [
@@ -357,6 +369,7 @@ window.DECK = {
       layout: 'closing',
       safeRight: 0.74,
       video: 'public/videos_1080p/16.mp4',
+      videoFreeze: 6.0,
       credits: false,
       content: {
         numbers: [

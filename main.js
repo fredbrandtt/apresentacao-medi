@@ -54,12 +54,16 @@
     var cls = opts.cls ? ' class="' + opts.cls + '"' : '';
     var extra = opts.attrs || '';
     return '<' + tag + cls + extra + ' data-count="' + target + '" data-from="' + from + '"' +
+      (opts.dec ? ' data-dec="' + opts.dec + '"' : '') +
       ' data-prefix="' + esc(opts.prefix || '') + '" data-suffix="' + esc(opts.suffix || '') + '">' +
-      countText(from, opts.prefix || '', opts.suffix || '') + '</' + tag + '>';
+      countText(from, opts.prefix || '', opts.suffix || '', opts.dec) + '</' + tag + '>';
   }
-  function countText(v, prefix, suffix) { return prefix + fmt(v) + suffix; }
+  /* data-dec="1": contador com casa decimal em pt-BR (9,3%). */
+  function fmtDec(n, dec) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+  function countText(v, prefix, suffix, dec) { return prefix + (dec ? fmtDec(v, dec) : fmt(v)) + suffix; }
   function setCount(el, v) {
-    el.textContent = countText(v, el.getAttribute('data-prefix') || '', el.getAttribute('data-suffix') || '');
+    var dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+    el.textContent = countText(v, el.getAttribute('data-prefix') || '', el.getAttribute('data-suffix') || '', dec);
   }
 
   /* Token numérico "+44%" -> {prefix:'+', n:44, suffix:'%'} */
@@ -127,22 +131,40 @@
     if (c.support) html += '<p class="t-support blk reveal">' + esc(c.support) + '</p>';
     var isKV = c.items.length && c.items[0].label !== undefined;
     if (isKV) {
-      /* Lista e total num unico painel de vidro (colunas 1 a 7). */
+      /* Slide 2: um painel de vidro em duas colunas. A esquerda, as quatro
+       * modalidades em linhas pequenas; a direita, a soma em display grande,
+       * a unidade em mono alinhada pela base e uma regua com ticks em que cada
+       * segmento e a parte de uma modalidade no total. A regua desenha em
+       * sincronia com a contagem: o numero e a linha sao o mesmo dado. */
+      var partes = c.items.map(function (it) {
+        var mm = /^([\d.]+)/.exec(it.value);
+        return mm ? parseInt(mm[1].replace(/\./g, ''), 10) : 0;
+      });
       html += '<div class="glass kv-panel reveal"><div class="kv-list">' + c.items.map(function (it) {
         return '<div class="kv blk reveal" data-custom><span class="kv-label">' + esc(it.label) + '</span><span class="kv-value">' + esc(it.value) + '</span><div class="rule draw-x"></div></div>';
-      }).join('');
+      }).join('') + '</div>';
       if (c.total) {
-        /* Destaque do slide: rotulo em display e o numero com gradiente,
-         * seguido da unidade em mono alinhada pela base. */
         var m = /^([\d.]+)\s*(.*)$/.exec(c.total.value);
         var alvo = m ? parseInt(m[1].replace(/\./g, ''), 10) : null;
         var unidade = m ? m[2] : '';
+        var soma = partes.reduce(function (a, b) { return a + b; }, 0) || alvo || 1;
         var val = (alvo !== null)
           ? countHTML(alvo, { cls: 'kv-total-num grad-v' }) + (unidade ? '<span class="kv-total-unit">' + esc(unidade) + '</span>' : '')
-          : esc(c.total.value);
-        html += '<div class="kv kv-total blk reveal" data-custom><span class="kv-label">' + esc(c.total.label) + '</span><span class="kv-value">' + val + '</span><div class="rule draw-x"></div></div>';
+          : '<span class="kv-total-num grad-v">' + esc(c.total.value) + '</span>';
+        var acc = 0, segs = '', ticks = '<i class="kv-tick fade" style="left: 0%"></i>';
+        partes.forEach(function (n, k) {
+          var ini = acc; acc += n;
+          segs += '<i class="rule draw-x kv-seg" style="--k: ' + k + '; left: ' + (ini / soma * 100).toFixed(3) + '%; width: ' + (n / soma * 100).toFixed(3) + '%" data-ini="' + ini + '" data-fim="' + acc + '"></i>';
+          ticks += '<i class="kv-tick fade" style="left: ' + (acc / soma * 100).toFixed(3) + '%" data-at="' + acc + '"></i>';
+        });
+        html += '<div class="kv-divider reveal"></div>' +
+          '<div class="kv-sum blk reveal" data-custom>' +
+            '<div class="kv-sum-value">' + val + '</div>' +
+            '<p class="kv-sum-label t-label fade">' + esc(c.total.label) + '</p>' +
+            '<div class="kv-ruler" data-total="' + soma + '">' + segs + ticks + '</div>' +
+          '</div>';
       }
-      html += '</div></div>';
+      html += '</div>';
     } else {
       html += listHTML(c.items);
     }
@@ -158,26 +180,55 @@
 
   LAYOUTS['anchor-number'] = function (c) {
     var m = /^(\d+)(%?)$/.exec(c.number);
-    /* O painel envolve apenas as duas linhas; a nota fica fora dele, no mesmo
-     * fluxo, 24 px abaixo: so assim ela acompanha a altura real do painel. */
-    return '<div class="anchor-zone blk reveal" data-custom>' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-anchor grad-v is-drift', suffix: m[2] }) + '</div>' +
+    var pct = parseInt(m[1], 10);
+    /* Regua de capacidade: a mesma regua de 5.414 do slide 2, agora com so a
+     * fracao usada preenchida. A trilha e a capacidade inteira; o preenchimento
+     * cresce junto com a contagem do numero-ancora. Os dois rotulos mono saem
+     * da propria nota (930 sobre 5.414): sem dois numeros nela, a regua fica
+     * sem rotulo, mas continua desenhando a fracao. */
+    var nums = String(c.note || '').match(/\d[\d.]*/g) || [];
+    var ticks = '';
+    for (var k = 0; k <= 10; k++) ticks += '<i class="ocup-tick fade" style="left: ' + (k * 10) + '%"></i>';
+    var labels = nums.length >= 2
+      ? '<span class="ocup-lbl ocup-lbl-used fade" style="left: ' + pct + '%">' + esc(nums[0]) + '</span>' +
+        '<span class="ocup-lbl ocup-lbl-total fade">' + esc(nums[1]) + '</span>'
+      : '';
+    var ruler = '<div class="ocup-ruler blk reveal" data-custom aria-hidden="true">' +
+        '<div class="ocup-bar">' +
+          '<i class="rule draw-x ocup-track"></i>' + ticks +
+          '<i class="rule draw-x ocup-fill" style="width: ' + pct + '%"></i>' +
+          '<i class="ocup-end fade" style="left: ' + pct + '%"></i>' +
+        '</div>' +
+        '<div class="ocup-labels t-label">' + labels + '</div>' +
+      '</div>';
+    /* O painel e o unico palco do grupo de dados: as duas linhas e a regua.
+     * A nota fica fora dele, no mesmo fluxo, 24 px abaixo: so assim ela
+     * acompanha a altura real do painel. */
+    return '<div class="anchor-zone blk reveal" data-custom>' + countHTML(pct, { tag: 'p', cls: 't-anchor grad-v is-drift', suffix: m[2] }) + '</div>' +
       '<div class="anchor-stack">' +
         '<div class="anchor-lines glass reveal">' +
           '<p class="anchor-line-1 blk reveal" data-custom>' + esc(c.line1) + '</p>' +
-          '<p class="anchor-line-2 blk reveal" data-custom><span class="grad">' + esc(c.line2) + '</span></p>' +
+          '<p class="anchor-line-2 blk reveal" data-custom>' + esc(c.line2) + '</p>' +
+          ruler +
         '</div>' +
         '<p class="note anchor-note t-label reveal" data-custom>' + esc(c.note) + '</p>' +
       '</div>';
   };
 
   LAYOUTS['text-statement'] = function (c) {
+    /* Slide 5: os achados sao um livro-razao, nao um paragrafo quebrado em
+     * linhas. Cada um entra em display e e fechado por um filete que desenha
+     * depois que a linha assenta; os tres filetes cobrem a faixa inteira e
+     * terminam na mesma vertical, junto da borda do assunto do video. Nao ha
+     * filete separador antes do corpo: a consequencia e a conclusao do que
+     * foi listado, e entra sozinha, um compasso depois do ultimo achado. */
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="statements blk reveal" data-custom>' + c.statements.map(function (s) {
-          return '<p class="t-statement" data-lines="' + esc(JSON.stringify([{ text: s }])) + '">' + esc(s) + '</p>';
+        '<div class="statements findings blk reveal" data-custom>' + c.statements.map(function (s, k) {
+          return '<p class="t-statement t-finding" data-lines="' + esc(JSON.stringify([{ text: s }])) + '">' + esc(s) + '</p>' +
+            '<div class="rule draw-x finding-rule" style="--k: ' + k + '" aria-hidden="true"></div>';
         }).join('') + '</div>' +
-        ruleHTML() +
-        '<p class="t-body blk maxw-900 reveal">' + esc(c.body) + '</p>' +
+        '<p class="t-body blk maxw-820 reveal">' + esc(c.body) + '</p>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -217,53 +268,106 @@
   };
 
   /* Slide 4 */
+  /* Slide 4: cada linha e uma regua. O percentual e o unico elemento grande,
+   * em display; rotulo e fracao ficam pequenos. A base do numero, a barra e o
+   * filete da regua assentam na mesma linha, e a barra termina em hairline.
+   * O viewBox e 1:1 com o palco (painel de 830 menos 2 x 40 de padding = 750),
+   * para o mono renderizar nos 16 px do piso, e nao encolhido. */
   LAYOUTS['bars-horizontal'] = function (c) {
-    var W = 980, labelW = 190, barX = 210, barW = 500, barH = 12, rowH = 84, numX = barX + barW + 24, pctX = W - 16;
+    var W = 750, barX = 184, barW = W - barX, rowH = 90, base = 62, barH = 10, tick = 5, lblY = 32;
     var y = 0, rows = '';
-    c.bars.forEach(function (b, i) {
-      var frac = b.done / b.capacity, cy = y + rowH / 2;
-      rows += '<g>' +
-        '<text class="lbl fade" x="0" y="' + (cy + 8) + '">' + esc(b.label) + '</text>' +
-        '<rect class="bar-cap fade" x="' + barX + '" y="' + (cy - barH / 2) + '" width="' + barW + '" height="' + barH + '"></rect>' +
-        '<rect class="' + (b.accent ? 'bar-pro' : 'bar-cur') + ' grow-x" data-done x="' + barX + '" y="' + (cy - barH / 2) + '" width="' + (barW * frac).toFixed(1) + '" height="' + barH + '"></rect>' +
-        '<text class="mono fade pulse" style="--k: ' + i + '" x="' + numX + '" y="' + (cy + 5) + '">' + countHTML(b.done, { tag: 'tspan' }) + '<tspan> / ' + fmt(b.capacity) + '</tspan></text>' +
-        '<text class="mono pct" x="' + pctX + '" y="' + (cy + 5) + '" text-anchor="end">' + esc(b.pct) + '</text>' +
+    c.bars.forEach(function (b) {
+      var fillW = +(barW * b.done / b.capacity).toFixed(1), xe = barX + fillW, by = y + base;
+      var pct = parseFloat(String(b.pct).replace('%', '').replace(',', '.'));
+      var ticks = '';
+      for (var k = 1; k <= 4; k++) {
+        var tx = barX + barW * k / 4, th = k === 4 ? tick * 2 : tick;
+        ticks += '<line class="cap-tick fade" x1="' + tx + '" y1="' + by + '" x2="' + tx + '" y2="' + (by - th) + '"></line>';
+      }
+      rows += '<g class="cap-row' + (b.accent ? ' is-accent' : '') + '">' +
+        countHTML(pct, { tag: 'text', cls: 'cap-pct pct', suffix: '%', dec: 1, attrs: ' x="0" y="' + by + '"' }) +
+        '<text class="cap-lbl fade" x="' + barX + '" y="' + (y + lblY) + '">' + esc(b.label) + '</text>' +
+        '<text class="mono cap-frac fade" x="' + W + '" y="' + (y + lblY) + '" text-anchor="end">' + countHTML(b.done, { tag: 'tspan' }) + '<tspan> / ' + fmt(b.capacity) + '</tspan></text>' +
+        '<line class="cap-track fade" x1="' + barX + '" y1="' + by + '" x2="' + W + '" y2="' + by + '"></line>' +
+        ticks +
+        (b.accent ? '<rect class="cap-glow" x="' + barX + '" y="' + (by - barH) + '" width="' + fillW + '" height="' + barH + '"></rect>' : '') +
+        '<rect class="' + (b.accent ? 'bar-pro' : 'bar-cur') + ' grow-x" x="' + barX + '" y="' + (by - barH) + '" width="' + fillW + '" height="' + barH + '"></rect>' +
+        '<line class="cap-end fade" data-dx="' + fillW + '" x1="' + xe + '" y1="' + by + '" x2="' + xe + '" y2="' + (by - barH - 8) + '"></line>' +
         '</g>';
       y += rowH;
       if (b.callout) {
-        rows += '<text class="lbl callout grad-svg" x="' + barX + '" y="' + (y + 4) + '">' + esc(b.callout) + '</text>';
-        y += 44;
+        rows += '<text class="cap-callout callout grad-svg" x="' + barX + '" y="' + (y - 2) + '">' + esc(b.callout) + '</text>';
+        y += 34;
       }
     });
+    var H = y - 12;
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass reveal"><svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + y + '" style="aspect-ratio: ' + W + ' / ' + y + '">' + SVG_GRAD + rows + '</svg></div>' +
+        '<div class="glass reveal"><svg class="chart blk reveal" data-custom viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + SVG_GRAD + rows + '</svg></div>' +
       '</div>' + noteHTML(c.note);
   };
 
-  /* Slide 6 */
+  /* Slide 6 · A espera tem forma propria.
+   *
+   * O video e uma colunata de chapas recuando ate o anel do tomografo: um
+   * ritmo de elementos repetidos em fuga. A espera do laudo e desenhada com
+   * esse mesmo vocabulario — uma regua de 11 ticks em mono, um por dia util,
+   * marchando da esquerda para a direita. O numero de dias e o unico elemento
+   * grande do slide (display, escala de ancora); rotulo, unidade e pontos
+   * ficam pequenos, sem nada no meio.
+   *
+   * O trecho vencido (do dia 3, que e a proposta MEDI, ate o 11) e o que doi:
+   * fica em trilha fina e recebe o pulso lento depois da revelacao. Um
+   * hairline vertical fecha a regua onde ela para, como no slide 3. */
   LAYOUTS.timeline = function (c) {
-    var W = 700, H = 150, x0 = 8, x1 = W - 8, ly = 64, pts = c.timeline.points;
-    var mid = pts[1], segCenter = x0 + (x1 - x0) * (mid.at / 2);
-    var svg = '<line class="axis draw" x1="' + x0 + '" y1="' + ly + '" x2="' + x1 + '" y2="' + ly + '"></line>' +
-      '<text class="mono seg fade" x="' + segCenter + '" y="' + (ly - 22) + '" text-anchor="middle">' + esc(c.timeline.segmentLabel) + '</text>' +
-      pts.map(function (p, i) {
-        var x = x0 + (x1 - x0) * p.at;
-        var anchor = i === 0 ? 'start' : 'end';
-        var tx = i === 0 ? x - 6 : x + 6;
-        return (p.at > 0 && p.at < 1 ? '<circle class="ring ring-6" cx="' + x + '" cy="' + ly + '" r="0"></circle>' : '') +
-          '<circle class="dot pop" data-at="' + p.at + '" cx="' + x + '" cy="' + ly + '" r="6"></circle>' +
-          '<text class="lbl-soft fade pt-label" data-at="' + p.at + '" x="' + tx + '" y="' + (ly + 48) + '" text-anchor="' + anchor + '">' + esc(p.label) + '</text>';
-      }).join('');
+    var pts = c.timeline.points;
+    /* "11 dias úteis" -> 11 e "dias úteis", sem tocar em data.js. */
+    var seg = String(c.timeline.segmentLabel);
+    var mSeg = /^(\d+)\s*(.*)$/.exec(seg);
+    var dias = mSeg ? parseInt(mSeg[1], 10) : 11;
+    var unidade = mSeg ? mSeg[2] : seg;
+
+    var ticks = '', rotulos = '';
+    for (var d = 0; d <= dias; d++) {
+      var pos = (d / dias * 100).toFixed(3);
+      var forte = (d === 0 || d === dias);
+      ticks += '<i class="pz-tick fade' + (forte ? ' is-forte' : '') + '" style="left: ' + pos + '%; --k: ' + d + '"></i>';
+    }
+    /* Marcos do percurso: os tres pontos de data.js, nas posicoes de data.js. */
+    var marcos = pts.map(function (p, i) {
+      var anchor = p.at === 0 ? 'start' : (p.at === 1 ? 'end' : 'mid');
+      return '<span class="pz-marco fade pz-' + anchor + '" data-at="' + p.at + '" style="left: ' + (p.at * 100).toFixed(3) + '%">' + esc(p.label) + '</span>';
+    }).join('');
+
     var m = /^(\d+)(%?)$/.exec(c.stat.number);
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="timeline-row blk reveal" data-custom>' +
-          '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" style="aspect-ratio: ' + W + ' / ' + H + '">' + svg + '</svg>' +
-          '<div class="stat glass reveal">' + countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-stat', suffix: m[2] }) + '<p class="t-body">' + esc(c.stat.text) + '</p></div>' +
+        /* O painel de vidro e o palco unico do grupo de dados: regua, numero
+         * grande e o percentual. Fica na coluna esquerda, longe do assunto. */
+        '<div class="glass prazo-panel reveal">' +
+          '<div class="pz-head blk reveal" data-custom>' +
+            countHTML(dias, { tag: 'span', cls: 'pz-num' }) +
+            '<span class="pz-unit">' + esc(unidade) + '</span>' +
+            '<span class="pz-ate">até o laudo</span>' +
+          '</div>' +
+          '<div class="pz-ruler blk reveal" data-custom aria-hidden="true">' +
+            '<div class="pz-bar">' +
+              '<i class="rule draw-x pz-track"></i>' + ticks +
+              '<i class="rule draw-x pz-fill"></i>' +
+              '<i class="pz-end fade"></i>' +
+            '</div>' +
+            '<div class="pz-marcos t-label">' + marcos + '</div>' +
+          '</div>' +
+          '<div class="rule draw-x pz-close" aria-hidden="true"></div>' +
+          '<div class="pz-stat blk reveal" data-custom>' +
+            countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-stat pz-pct', suffix: m[2] }) +
+            '<p class="t-body pz-pct-txt">' + esc(c.stat.text) + '</p>' +
+          '</div>' +
         '</div>' +
-        '<p class="t-body blk maxw-900 reveal">' + esc(c.body) + '</p>' +
-        '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>' +
+        '<p class="t-body blk reveal">' + esc(c.body) + '</p>' +
+        /* Sem filete: no slide 6 a pergunta fecha o argumento sozinha, e um
+         * filete atras da linha de base virava sublinhado. */
+        '<p class="t-statement blk closing reveal">' + esc(c.closing) + '</p>' +
       '</div>' + noteHTML(c.note);
   };
 
@@ -810,18 +914,57 @@
   CHOREO[2] = function (h, tl, sec) {
     var t = h.lines(h.one('.t-title'), 0) - 0.5;
     h.block(h.one('.t-support'), t);
-    var rows = h.q('.kv:not(.kv-total)'), r0 = t + 0.3;
+    /* Ordem de leitura: as quatro linhas, o divisor que desce, e por fim a
+     * soma contando enquanto a regua desenha segmento a segmento. */
+    var rows = h.q('.kv'), r0 = t + 0.3;
     rows.forEach(function (row, i) {
-      var at = r0 + i * 0.16;
+      var at = r0 + i * 0.14;
       tl.set(row, { opacity: 1 }, at);
       h.ruleX(row.querySelector('.rule'), at, 0.6);
       h.block([row.querySelector('.kv-label'), row.querySelector('.kv-value')], at + 0.1, { y: 12 });
     });
-    var total = h.one('.kv-total'), tt = r0 + rows.length * 0.16 + 0.2;
-    tl.set(total, { opacity: 1 }, tt);
-    h.ruleX(total.querySelector('.rule'), tt, 0.6);
-    h.block([total.querySelector('.kv-label'), total.querySelector('.kv-value')], tt + 0.1, { y: 12 });
-    h.count(total.querySelector('[data-count]'), tt + 0.1, 0.9);
+    var div = h.one('.kv-divider'), td = r0 + 0.25;
+    if (div) {
+      if (RM) tl.fromTo(div, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'none' }, td);
+      else tl.fromTo(div, { opacity: 1, scaleY: 0, transformOrigin: 'center top' }, { scaleY: 1, duration: 0.9, ease: EASE_OUT }, td);
+    }
+    var sum = h.one('.kv-sum'); if (!sum) return;
+    var ts = r0 + rows.length * 0.14 + 0.05;
+    tl.set(sum, { opacity: 1 }, ts);
+    h.block(sum.querySelector('.kv-sum-value'), ts, { y: 18, dur: 0.8 });
+    var num = sum.querySelector('[data-count]'), segs = h.q('.kv-seg'), ticks = h.q('.kv-tick');
+    var total = parseFloat(sum.querySelector('.kv-ruler').getAttribute('data-total')) || 1;
+    var t0 = ts + 0.1, dur = 1.1;
+    if (num) {
+      var target = parseFloat(num.getAttribute('data-count')), from = parseFloat(num.getAttribute('data-from')) || 0;
+      if (RM) {
+        tl.call(function () { setCount(num, target); }, null, t0);
+        tl.set(segs, { scaleX: 1 }, t0);
+      } else {
+        /* Um unico tween dirige o contador e os segmentos, para nunca
+         * divergirem: cada segmento cresce enquanto a contagem atravessa a
+         * parte dele no total. */
+        var o = { v: from };
+        segs.forEach(function (seg) { tl.set(seg, { transformOrigin: 'left center' }, t0); });
+        tl.to(o, { v: target, duration: dur, ease: EASE_COUNT, onUpdate: function () {
+          setCount(num, o.v);
+          var v = o.v / target * total;
+          segs.forEach(function (seg) {
+            var ini = parseFloat(seg.getAttribute('data-ini')), fim = parseFloat(seg.getAttribute('data-fim'));
+            var k = fim > ini ? (v - ini) / (fim - ini) : 1;
+            seg.style.transform = 'scaleX(' + Math.max(0, Math.min(1, k)).toFixed(4) + ')';
+          });
+        } }, t0);
+      }
+    }
+    /* Os ticks acendem quando a contagem passa por cada fronteira: para
+     * power3.out, a fracao f do valor e atingida em p = 1 - (1 - f)^(1/3). */
+    ticks.forEach(function (tk) {
+      var atV = parseFloat(tk.getAttribute('data-at') || '0'), f = atV / total;
+      var p = RM ? 0 : 1 - Math.pow(Math.max(0, 1 - f), 1 / 3);
+      tl.to(tk, { opacity: 1, duration: RM ? 0.3 : 0.35, ease: 'power2.out' }, t0 + p * dur);
+    });
+    h.fade(sum.querySelector('.kv-sum-label'), t0 + dur * 0.55, { dur: 0.6 });
   };
 
   CHOREO[3] = function (h, tl, sec) {
@@ -830,59 +973,119 @@
     h.block(h.one('.anchor-zone'), start, { y: 0, dur: 0.4 });
     var end = h.count(h.one('.t-anchor'), start, 1.4);
     h.block(lines[0], start + 0.2);
+    /* A regua entra na ordem de leitura, logo abaixo da primeira linha: a
+     * trilha inteira desenha primeiro, os ticks acendem em cascata, e o
+     * preenchimento cresce na mesma duracao e na mesma curva da contagem,
+     * de modo que numero e barra chegam a 17 no mesmo instante. O rotulo do
+     * total ja esta la enquanto a barra corre; o do usado so aparece quando
+     * ela para, com o hairline que a fecha. */
+    var ruler = h.one('.ocup-ruler');
+    if (ruler) {
+      var fill = ruler.querySelector('.ocup-fill'), r0 = start + 0.3, dFill = end - r0;
+      tl.set(ruler, { opacity: 1 }, r0);
+      h.ruleX(ruler.querySelector('.ocup-track'), r0, 0.7);
+      h.fade(h.q('.ocup-tick'), r0 + 0.1, { stagger: 0.035, dur: 0.3 });
+      h.fade(ruler.querySelector('.ocup-lbl-total'), r0 + 0.3, { dur: 0.4 });
+      if (RM) tl.set(fill, { scaleX: 1 }, r0);
+      else tl.fromTo(fill, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: dFill, ease: EASE_COUNT }, r0);
+      h.fade([ruler.querySelector('.ocup-end'), ruler.querySelector('.ocup-lbl-used')], end - 0.15, { dur: 0.3 });
+    }
     h.block(lines[1], end + 0.3);
     h.note(end + 0.6);
   };
 
+  /* Slide 4: primeiro as reguas vazias e os rotulos; depois, linha a linha na
+   * ordem de leitura, o percentual conta enquanto a barra cresce e a hairline
+   * de terminacao acompanha a ponta. A chamada da mamografia fecha. */
   CHOREO[4] = function (h, tl, sec) {
     var t = h.lines(h.one('.t-title'), 0) - 0.5;
     var svg = h.one('.chart');
     tl.set(svg, { opacity: 1 }, t);
-    h.fade(h.q('.chart .fade'), t, { dur: 0.5 });
-    var bars = h.q('.chart .grow-x'), b0 = t + 0.35, calloutAt = 0;
-    bars.forEach(function (bar, i) {
-      var at = b0 + i * 0.12;
-      h.growX(bar, at, 1.1);
-      var g = bar.parentNode;
-      h.count(g.querySelector('[data-count]'), at, 1.1);
-      h.fade(g.querySelector('.pct'), at + 0.9, { dur: 0.3 });
-      if (bar.classList.contains('bar-pro')) calloutAt = at + 1.1 + 0.2;
+    h.fade(h.q('.chart .cap-track, .chart .cap-tick'), t, { dur: 0.5 });
+    h.fade(h.q('.chart .cap-lbl'), t + 0.1, { dur: 0.5, stagger: 0.08 });
+    var rows = h.q('.chart .cap-row'), b0 = t + 0.4, calloutAt = b0;
+    rows.forEach(function (g, i) {
+      var at = b0 + i * 0.16, pct = g.querySelector('.cap-pct'), end = g.querySelector('.cap-end');
+      h.fade(pct, at, { dur: 0.4 });
+      h.count(pct, at, 1.1);
+      h.growX(g.querySelector('.grow-x'), at, 1.1);
+      h.fade(end, at, { dur: 0.4 });
+      if (!RM) tl.fromTo(end, { x: -parseFloat(end.getAttribute('data-dx')) }, { x: 0, duration: 1.1, ease: EASE_OUT }, at);
+      h.count(g.querySelector('.cap-frac [data-count]'), at, 1.1);
+      h.fade(g.querySelector('.cap-frac'), at + 0.2, { dur: 0.4 });
+      if (g.classList.contains('is-accent')) calloutAt = at + 1.2;
     });
     h.fade(h.one('.callout'), calloutAt, { dur: 0.5 });
-    h.note(b0 + bars.length * 0.12 + 1.2);
+    h.note(b0 + rows.length * 0.16 + 1.1);
   };
 
   CHOREO[5] = function (h, tl, sec) {
-    var t = h.lines(h.one('.t-title'), 0) - 0.5;
+    /* Slide de risco: peso por isolamento, como no 7. O titulo entra mais
+     * devagar; cada achado sobe sozinho e o filete que o fecha desenha da
+     * esquerda depois que a linha assentou. A consequencia so aparece quando
+     * o terceiro filete termina, e a nota fecha. Se o orcamento do video for
+     * menor, startEnter() comprime a timeline por timeScale. */
+    var t = h.lines(h.one('.t-title'), 0, { dur: 1.2 }) - 0.6;
     var wrap = h.one('.statements');
     tl.set(wrap, { opacity: 1 }, t);
-    var ps = h.q('.statements > p');
-    ps.forEach(function (p, i) { tl.set(p, { opacity: 1 }, t + i * 0.5); h.lines(p, t + i * 0.5, { dur: 0.8 }); });
-    var t2 = t + ps.length * 0.5 + 0.2;
-    h.block(h.one('.band > .rule'), t2);
-    h.block(h.one('.band .t-body'), t2 + 0.1);
-    h.note(t2 + 0.5);
+    var ps = h.q('.statements > p'), rules = h.q('.statements > .rule');
+    var at = t, ultimo = t;
+    ps.forEach(function (p, i) {
+      tl.set(p, { opacity: 1 }, at);
+      var fim = h.lines(p, at, { dur: 0.9 });
+      if (rules[i]) fim = Math.max(fim, h.ruleX(rules[i], at + 0.35, 0.9));
+      ultimo = fim;
+      at += 0.55;
+    });
+    var t2 = ultimo + 0.15;
+    h.block(h.one('.band .t-body'), t2, { dur: 0.9 });
+    h.note(t2 + 0.6);
   };
 
+  /* Slide 6: a espera conta. O numero de dias sobe enquanto a regua desenha e
+   * os ticks acendem em cadencia — numero e linha sao o mesmo dado, como no
+   * slide 2. So depois entra o percentual, que e a consequencia. */
   CHOREO[6] = function (h, tl, sec) {
     var t = h.lines(h.one('.t-title'), 0) - 0.5;
-    var row = h.one('.timeline-row'), line = row.querySelector('.draw');
-    tl.set(row, { opacity: 1 }, t);
-    var d0 = t, D = 1.6;
-    h.draw(line, d0, D, 'none');
-    h.q('.dot').forEach(function (dot) {
-      var at = d0 + parseFloat(dot.getAttribute('data-at')) * D;
-      h.pop(dot, at, { dur: 0.3 });
-      var lbl = sec.querySelector('.pt-label[data-at="' + dot.getAttribute('data-at') + '"]');
-      h.fade(lbl, at + 0.05, { dur: 0.4 });
-      if (parseFloat(dot.getAttribute('data-at')) > 0 && parseFloat(dot.getAttribute('data-at')) < 1) h.fade(h.one('.seg'), at, { dur: 0.4 });
+    var ruler = h.one('.pz-ruler'), head = h.one('.pz-head');
+    var num = head.querySelector('[data-count]');
+    var fill = ruler.querySelector('.pz-fill');
+    var ticks = h.q('.pz-tick');
+    var D = 1.5, r0 = t + 0.15;
+
+    tl.set(head, { opacity: 1 }, t);
+    h.block(num, t, { y: 14, dur: 0.6 });
+    h.fade([head.querySelector('.pz-unit'), head.querySelector('.pz-ate')], t + 0.25, { dur: 0.5, stagger: 0.06 });
+
+    tl.set(ruler, { opacity: 1 }, r0);
+    h.ruleX(ruler.querySelector('.pz-track'), r0, 0.7);
+
+    /* A contagem dos dias e o preenchimento correm juntos, na mesma curva. */
+    if (num) h.count(num, r0, D);
+    if (RM) tl.set(fill, { scaleX: 1 }, r0);
+    else tl.fromTo(fill, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: D, ease: EASE_COUNT }, r0);
+
+    /* Cada tick acende quando a contagem passa por ele. Para power3.out,
+     * a fracao f e atingida em p = 1 - (1 - f)^(1/3). */
+    var nTicks = ticks.length - 1;
+    ticks.forEach(function (tk, i) {
+      var f = nTicks > 0 ? i / nTicks : 1;
+      var p = RM ? 0 : 1 - Math.pow(Math.max(0, 1 - f), 1 / 3);
+      tl.to(tk, { opacity: 1, duration: RM ? 0.3 : 0.3, ease: 'power2.out' }, r0 + p * D);
     });
-    var stat = row.querySelector('.stat'), cAt = d0 + D;
-    h.block(stat, cAt, { y: 0 });
-    h.count(stat.querySelector('[data-count]'), cAt, 0.9);
-    h.block(h.one('.band > .t-body'), cAt + 0.2);
-    h.block(h.one('.closing'), cAt + 0.9 + 0.4);
-    h.note(cAt + 1.6);
+
+    var fim = r0 + D;
+    h.fade(ruler.querySelector('.pz-end'), fim - 0.15, { dur: 0.3 });
+    h.fade(h.q('.pz-marco'), fim - 0.1, { stagger: 0.08, dur: 0.4 });
+    h.ruleX(h.one('.pz-close'), fim + 0.1, 0.7);
+
+    var stat = h.one('.pz-stat');
+    h.block(stat, fim + 0.25, { y: 12 });
+    h.count(stat.querySelector('[data-count]'), fim + 0.3, 0.9);
+
+    h.block(h.one('.band > .t-body'), fim + 0.6);
+    h.block(h.one('.closing'), fim + 1.0);
+    h.note(fim + 1.3);
   };
 
   CHOREO[7] = function (h, tl, sec) {
@@ -1122,10 +1325,10 @@
   vids.forEach(function (v, k) {
     v.loop = false;
     v.addEventListener('ended', function () {
-      /* Congela no ultimo frame. Nunca remove, esconde ou troca o src do
-       * elemento que esta na frente: o slide 9 termina quase branco por
-       * causa do proprio arquivo, nao por causa daqui. */
-      try { v.currentTime = Math.max(0, v.duration - 0.04); } catch (e) { /* ignorado */ }
+      /* Congela no ponto de descanso do slide, que so e o ultimo frame quando
+       * o assunto continua em quadro ate o fim. Nunca remove, esconde ou troca
+       * o src do elemento que esta na frente. */
+      try { v.currentTime = freezeTime(v, vSrc[k]); } catch (e) { /* ignorado */ }
       v.pause();
     });
     v.addEventListener('error', function () { if (k === front) media.classList.add('is-failed'); });
@@ -1165,24 +1368,78 @@
     setTimeout(fin, 600);
   }
 
-  /* Todo play() passa por aqui: a taxa some quando o src troca. */
+  /* Todo play() passa por aqui: a taxa some quando o src troca.
+   *
+   * Quando o slide declara `videoFreeze`, `ended` nunca chega — o vigia de
+   * timeupdate para a reproducao no ponto. Ele se desliga sozinho ao parar,
+   * ao trocar de src e ao pausar por outro motivo, para nao sobrar preso a um
+   * elemento que ja mudou de papel no pool. */
   function playVideo(v) {
     if (!v) return;
     try { v.playbackRate = VIDEO_RATE; } catch (e) { /* ignorado */ }
+    armarFreeze(v);
     var p = v.play();
     if (p && p.catch) p.catch(function () { /* autoplay bloqueado: fica no primeiro frame */ });
   }
 
-  /* Duracao efetiva: o que o espectador realmente espera, ja com a taxa. */
-  function effectiveDuration(v) {
+  function armarFreeze(v) {
+    if (v.__freezeWatch) { v.removeEventListener('timeupdate', v.__freezeWatch); v.__freezeWatch = null; }
+    var i = slideOfVideo(v);
+    var s = (i >= 0 && i < TOTAL) ? DECK.slides[i] : null;
+    if (!s || typeof s.videoFreeze !== 'number') return;
+    var watch = function () {
+      if (vSrc[vids.indexOf(v)] !== i) { v.removeEventListener('timeupdate', watch); v.__freezeWatch = null; return; }
+      var alvo = freezeTime(v, i);
+      if (v.currentTime >= alvo) {
+        v.removeEventListener('timeupdate', watch); v.__freezeWatch = null;
+        try { v.currentTime = alvo; } catch (e) { /* ignorado */ }
+        v.pause();
+      }
+    };
+    v.__freezeWatch = watch;
+    v.addEventListener('timeupdate', watch);
+  }
+
+  /* Duracao efetiva: o que o espectador realmente espera, ja com a taxa.
+   * Quando o video congela antes do fim, a espera acaba no congelamento — e
+   * a ele que o texto tem de acompanhar, nao ao fim do arquivo. */
+  function effectiveDuration(v, i) {
     var dur = (v && isFinite(v.duration) && v.duration > 1) ? v.duration : VIDEO_FALLBACK_S;
+    var s = (i !== undefined && i >= 0 && i < TOTAL) ? DECK.slides[i] : null;
+    if (s && typeof s.videoFreeze === 'number' && s.videoFreeze > 0) dur = Math.min(dur, s.videoFreeze);
     return dur / VIDEO_RATE;
   }
 
-  /* O vídeo está parado no último frame (volta, ou fim de reprodução). */
+  /* Onde o video para quando termina, ou quando a volta o crava no fim.
+   *
+   * O padrao e o ultimo frame, mas varios videos tiram o assunto de quadro
+   * antes de acabar e terminam numa parede clara: congelar ali deixava o
+   * slide com cara de tela branca enquanto o apresentador falava. Esses
+   * declaram `videoFreeze` em data.js, em segundos de tempo de arquivo.
+   *
+   * O recuo de 0,04 s do padrao nao chega a um frame a 24 fps (o ultimo e
+   * apresentado em 7,958 s de 8), entao o navegador prende no ultimo frame
+   * disponivel de qualquer forma; manter a margem so evita disparar `ended`
+   * de novo ao cravar a posicao. */
+  function freezeTime(v, i) {
+    if (!v || !isFinite(v.duration) || v.duration <= 0) return 0;
+    var fim = Math.max(0, v.duration - 0.04);
+    var s = (i !== undefined && i >= 0 && i < TOTAL) ? DECK.slides[i] : null;
+    var t = s && s.videoFreeze;
+    if (typeof t !== 'number' || !isFinite(t) || t <= 0) return fim;
+    return Math.min(t, fim);
+  }
+
+  /* Qual slide esta carregado em cada elemento do pool. */
+  function slideOfVideo(v) {
+    var k = vids.indexOf(v);
+    return k < 0 ? -1 : vSrc[k];
+  }
+
+  /* O vídeo está parado no ponto de congelamento (volta, ou fim de reprodução). */
   function atLastFrame(v) {
     if (!v || !isFinite(v.duration) || v.duration <= 0) return false;
-    return v.paused && v.currentTime >= v.duration - 0.12;
+    return v.paused && v.currentTime >= freezeTime(v, slideOfVideo(v)) - 0.12;
   }
 
   function setFront(k) {
@@ -1217,8 +1474,9 @@
   function switchVideo(i, dir, cb) {
     /* Slide 17 nao tem video: mantem o do 16 na frente, congelado, com zoom. */
     if (!srcOf(i)) {
+      /* O 17 reaproveita o video do 16, congelado no ponto de descanso dele. */
       var atual = vids[front];
-      try { if (isFinite(atual.duration)) atual.currentTime = Math.max(0, atual.duration - 0.04); } catch (e) { /* */ }
+      try { atual.currentTime = freezeTime(atual, vSrc[front]); } catch (e) { /* */ }
       atual.pause();
       media.classList.add('is-zoom');
       if (cb) cb();
@@ -1240,7 +1498,7 @@
     if (dir === -1) {
       media.classList.remove('is-zoom');
       whenReady(v, function () {
-        seekTo(v, Math.max(0, (v.duration || 8) - 0.04), function () {
+        seekTo(v, freezeTime(v, i), function () {
           v.pause();
           setFront(back);
           /* O elemento que saiu guarda o slide i + 1 no primeiro frame, pronto para avançar. */
@@ -1339,7 +1597,7 @@
       /* Abrir direto no slide final: congela o video anterior e liga o zoom. */
       if (!next.data.video) {
         var vf = vids[front];
-        try { if (isFinite(vf.duration)) vf.currentTime = Math.max(0, vf.duration - 0.04); } catch (e) { /* */ }
+        try { vf.currentTime = freezeTime(vf, vSrc[front]); } catch (e) { /* */ }
         vf.pause();
         media.classList.add('is-zoom');
       }
@@ -1393,7 +1651,7 @@
     if (dir === -1 || !s.data.video || atLastFrame(v)) {
       return { delay: 0, budget: BACK_REVEAL_MS, immediate: true };
     }
-    var dur = effectiveDuration(v);
+    var dur = effectiveDuration(v, s.index);
     var startFrac = (s.data.id === 3) ? REVEAL_START_S3 : REVEAL_START;
     return { delay: dur * startFrac * 1000, budget: dur * (REVEAL_END - startFrac) * 1000 };
   }
@@ -1406,7 +1664,7 @@
     clearPending();
     var v = vids[front];
     if (v && isFinite(v.duration)) {
-      try { v.currentTime = Math.max(0, v.duration - 0.04); } catch (e) { /* ignorado */ }
+      try { v.currentTime = freezeTime(v, vSrc[front]); } catch (e) { /* ignorado */ }
       v.pause();
     }
     if (enterTL) {

@@ -342,6 +342,30 @@ html, body {
   margin: 0;
 }
 
+/* Slide 5: livro-razao de achados. Um degrau abaixo do titulo e bem acima do
+ * corpo, sem nada no meio: 64 / 40 / 24. O bloco se estica na faixa para os
+ * filetes cobrirem a largura toda; o texto fica mais estreito que o filete,
+ * como uma linha de laudo, e a que quebra em duas fica balanceada. */
+.findings {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.t-finding {
+  font-size: calc(40 * var(--s) * var(--grow, 1));
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  max-width: calc(900 * var(--s));
+  padding-bottom: calc(18 * var(--s));
+  text-wrap: balance;
+}
+
+.findings > .rule { margin-bottom: calc(22 * var(--s)); }
+/* O ultimo filete abre um compasso maior antes da consequencia: ela e outra
+ * voz (corpo, nao display) e nao pode parecer o quarto achado. */
+.findings > .rule:last-child { margin-bottom: calc(16 * var(--s)); }
+
 .t-body {
   font-family: var(--font-sans);
   font-size: calc(var(--fs-body) * var(--grow, 1));
@@ -423,6 +447,7 @@ html, body {
   transform-origin: left center;
 }
 
+.maxw-820 { max-width: calc(820 * var(--s)); }
 .maxw-900 { max-width: calc(900 * var(--s)); }
 .maxw-980 { max-width: var(--zone); }
 
@@ -458,22 +483,24 @@ html, body {
 .list-text { flex: 1 1 auto; }
 .list-lead { color: var(--ink); }
 
-/* Linhas rótulo + valor (slide 2) */
-/* Painel do slide 2: colunas 1 a 7, 960 px na escala base. O painel se
- * dimensiona pelo conteudo; a faixa nao pode espremê-lo, senao o destaque
- * (rotulo + numero de 56 px) e cortado pelo overflow do vidro. */
+/* ---------- Slide 2: painel em duas colunas ---------- */
+/* Um unico vidro, colunas 1 a 7 (960 px na escala base). A esquerda, as
+ * quatro modalidades em corpo pequeno; a direita, a soma em display grande
+ * com a unidade em mono pela base e a regua de composicao no rodape. O painel
+ * se dimensiona pelo conteudo: a faixa nao pode espreme-lo. */
 .kv-panel {
   width: min(calc(960 * var(--s)), calc(100vw * var(--safe, 0.56) - var(--m-left)));
   padding: calc(40 * var(--s));
   flex: 0 0 auto;
   min-height: auto;
   overflow: visible;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
 }
 
-.kv-panel .kv-list { flex: 0 0 auto; }
-
-.kv-list {
-  width: 100%;
+.kv-panel .kv-list {
+  flex: 0 0 calc(336 * var(--s));
   display: flex;
   flex-direction: column;
 }
@@ -483,12 +510,11 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: var(--g16) 0;
+  gap: var(--g16);
+  padding: calc(13 * var(--s)) 0;
 }
 
-/* No painel do slide 2 as quatro linhas cedem altura para o destaque
- * (rotulo 28 px + numero 56 px) caber na faixa sem reduzir a tipografia. */
-.kv-panel .kv:not(.kv-total) { padding: calc(10 * var(--s)) 0; }
+.kv:first-child { padding-top: 0; }
 
 .kv .rule {
   position: absolute;
@@ -501,61 +527,112 @@ html, body {
 .kv-label {
   font-size: calc(var(--fs-body) * var(--grow, 1));
   color: var(--ink-body);
+  white-space: nowrap;
 }
 
 .kv-value {
   font-family: var(--font-mono);
-  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
+  font-size: max(var(--fs-label), calc(18 * var(--s) * var(--grow, 1)));
   letter-spacing: 0.02em;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
+  white-space: nowrap;
 }
 
-/* Destaque do slide 2: separado por 32 px, divisor mais escuro, rotulo em
- * display a 28 px e o numero a 56 px com o gradiente vertical. */
-.kv.kv-total {
-  margin-top: calc(32 * var(--s));
-  padding-top: calc(32 * var(--s));
-  align-items: baseline;
+/* Divisor vertical: desenha de cima para baixo antes de a soma entrar. */
+.kv-divider {
+  flex: 0 0 1px;
+  align-self: stretch;
+  margin: 0 calc(32 * var(--s));
+  background: rgba(28, 37, 40, 0.16);
+  transform-origin: center top;
 }
 
-.kv.kv-total .rule {
-  bottom: auto;
-  top: 0;
-  background: rgba(28, 37, 40, 0.28);
+/* A soma: numero grande, unidade pela base, legenda em mono, regua no pe. */
+.kv-sum {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.kv.kv-total .kv-label {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 96, "wdth" 100;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  font-size: calc(28 * var(--s));
-  color: var(--ink);
-}
-
-.kv.kv-total .kv-value {
+.kv-sum-value {
   display: flex;
   align-items: baseline;
-  gap: calc(10 * var(--s));
+  gap: calc(12 * var(--s));
+  white-space: nowrap;
 }
 
 .kv-total-num {
   font-family: var(--font-display);
   font-variation-settings: "opsz" 96, "wdth" 100;
   font-weight: 500;
-  letter-spacing: -0.025em;
-  font-size: calc(56 * var(--s));
-  line-height: 1;
+  letter-spacing: -0.035em;
+  font-size: calc(120 * var(--s));
+  line-height: 0.92;
   font-variant-numeric: tabular-nums;
+  margin-left: calc(-4 * var(--s));   /* compensa o side bearing do 5 */
 }
 
 .kv-total-unit {
   font-family: var(--font-mono);
-  font-size: calc(16 * var(--s));
+  font-size: calc(18 * var(--s));
   letter-spacing: 0.02em;
   color: var(--ink-muted);
+}
+
+/* O seletor duplo vence .t-label, declarado depois na folha. */
+.kv-sum-label.t-label {
+  margin: calc(10 * var(--s)) 0 calc(24 * var(--s)) 0;
+  font-size: calc(18 * var(--s));
+  color: var(--ink-muted);
+}
+
+/* Regua de composicao: comprimento total = 5.414. Cada segmento e a parte
+ * de uma modalidade, na ordem das linhas a esquerda; os ticks marcam as
+ * fronteiras. Assenta na mesma linha do ultimo filete da coluna esquerda. */
+.kv-ruler {
+  position: relative;
+  width: 100%;
+  height: calc(14 * var(--s));
+  margin-top: auto;                    /* assenta no pe do painel */
+}
+
+/* Tres classes: vence `.glass .rule`, que pintaria o segmento de cinza. */
+.kv-panel .kv-ruler .kv-seg {
+  position: absolute;
+  bottom: 0;
+  height: 3px;
+  width: auto;
+  background: var(--medi-teal);
+  transform-origin: left center;
+}
+
+.kv-panel .kv-ruler .kv-seg:nth-child(even) { background: rgba(18, 168, 157, 0.55); }
+
+.kv-tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 100%;
+  margin-left: -0.5px;
+  background: rgba(28, 37, 40, 0.7);
+}
+
+.kv-tick:last-child { margin-left: -1px; }
+
+/* Loop: a regua e varrida devagar, um segmento por vez, como a mesa do
+ * tomografo atravessando o anel. So depois da revelacao. */
+.slide-ready .kv-ruler .kv-seg {
+  animation: seg-scan 7s ease-in-out infinite;
+  animation-delay: calc(var(--k, 0) * 0.45s);
+}
+
+@keyframes seg-scan {
+  0%, 78%, 100% { filter: brightness(1); }
+  86% { filter: brightness(1.35); }
 }
 
 /* Fatos do mapa (slide 9) */
@@ -740,6 +817,9 @@ html, body {
   margin: 0;
 }
 
+/* Tinta cheia, sem gradiente: o unico gradiente de texto do slide e o 17%.
+ * O verde-agua fica reservado ao que esta em uso (a barra); o que esta
+ * parado pesa por grafite e contencao, nao por cor. */
 .anchor-line-2 {
   font-family: var(--font-display);
   font-variation-settings: "opsz" 96, "wdth" 100;
@@ -747,12 +827,99 @@ html, body {
   letter-spacing: -0.025em;
   font-size: calc(32 * var(--s));
   line-height: 1.2;
+  color: var(--ink);
   margin: calc(12 * var(--s)) 0 0 0;
 }
 
 /* Se 28 px nao couber em uma linha dentro do max-width, desce para 26. */
 @media (max-width: 1500px) {
   .anchor-line-1 { font-size: calc(26 * var(--s)); }
+}
+
+/* Regua de capacidade (slide 3): mesmo vocabulario da regua do slide 2
+ * (ticks em tinta, segmento verde-agua), mas aqui so 17% do comprimento
+ * esta preenchido. A trilha hairline e o que esta parado; o preenchimento
+ * tem a cor do fio de luz no anel do tomografo, a direita: o acento nasce
+ * do video. Um hairline vertical em tinta fecha a barra onde ela para. */
+.ocup-ruler {
+  display: block;
+  width: 100%;
+  margin-top: calc(28 * var(--s));
+}
+
+.ocup-bar {
+  position: relative;
+  height: calc(14 * var(--s));
+}
+
+.ocup-ruler .rule.ocup-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 1px;
+  background: rgba(28, 37, 40, 0.28);
+  transform-origin: left center;
+}
+
+.ocup-tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: calc(6 * var(--s));
+  margin-left: -0.5px;
+  background: rgba(28, 37, 40, 0.5);
+}
+
+.ocup-tick:last-child { margin-left: -1px; }
+
+.ocup-ruler .rule.ocup-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--medi-teal);
+  transform-origin: left center;
+}
+
+.ocup-end {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 100%;
+  margin-left: -0.5px;
+  background: var(--ink);
+}
+
+.ocup-labels {
+  position: relative;
+  height: calc(var(--fs-label) * 1.4);
+  margin-top: calc(8 * var(--s));
+  font-variant-numeric: tabular-nums;
+}
+
+.ocup-lbl {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.ocup-lbl-used {
+  transform: translateX(-50%);
+  color: var(--ink);
+}
+
+.ocup-lbl-total { right: 0; }
+
+/* Loop: o que doi e o trecho vazio. A trilha e os ticks respiram devagar,
+ * em amplitude baixa; a barra verde-agua fica parada. So depois da revelacao. */
+.slide-ready .ocup-ruler .ocup-track,
+.slide-ready .ocup-ruler .ocup-tick { animation: ocup-rest 7s ease-in-out infinite; }
+
+@keyframes ocup-rest {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 
@@ -782,6 +949,30 @@ html, body {
 .chart .bar-cap { fill: var(--line); }
 .chart .bar-cur { fill: var(--current); }
 .chart .bar-pro { fill: var(--proposal); }
+
+/* Slide 4: regua por linha. Percentual em display (o unico elemento grande),
+   rotulo em corpo, fracao e ticks em mono; barra com terminacao em hairline.
+   Tamanhos em unidades do viewBox, que e 1:1 com o palco. */
+.chart .cap-pct {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  font-size: 52px;
+  letter-spacing: -0.03em;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.chart .cap-row.is-accent .cap-pct { fill: var(--medi-teal); }
+.chart .cap-lbl { font-size: 22px; fill: var(--ink-body); }
+.chart .cap-callout { font-size: 22px; }
+.chart .cap-track,
+.chart .cap-tick { stroke: var(--line-ruler); stroke-width: 1; fill: none; }
+.chart .cap-end { stroke: var(--ink-soft); stroke-width: 1; fill: none; }
+.chart .cap-row.is-accent .cap-end { stroke: var(--medi-teal); }
+/* A barra da mamografia sai do teal profundo e chega no verde-agua claro das
+   lamelas do video: o acento nasce do brilho da maquina. */
+.chart .cap-row.is-accent .bar-pro { fill: url(#gradTeal); }
+.chart .cap-glow { fill: var(--medi-teal); opacity: 0; filter: blur(9px); }
 .chart .dot { fill: var(--ink); }
 
 .chart-row {
@@ -867,31 +1058,203 @@ html, body {
   .slide[data-layout="bars-grouped"] .band > .glass { max-height: 68%; }
 }
 
-.timeline-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--g32);
-  width: 100%;
-}
-
-.timeline-row .chart { width: calc(620 * var(--s)); flex: 1 1 auto; min-width: 0; }
-
 .stat {
   display: flex;
   flex-direction: column;
   gap: var(--g8);
 }
 
-/* O painel do 22% tem largura propria: numero e frase nao podem quebrar. */
-.stat.glass {
+.stat .t-body { max-width: calc(280 * var(--s)); }
+
+/* ---------- Slide 6: a espera tem forma propria ---------- */
+/* Um unico painel de vidro como palco do grupo de dados, na coluna esquerda,
+ * fora do assunto do video. Dentro dele: o numero de dias em escala de
+ * display (o unico elemento grande), a regua de 11 ticks em mono — um por dia
+ * util, ecoando o ritmo das chapas em fuga do video — e o percentual. */
+
+/* A largura para bem antes da borda esquerda da chapa da frente (que comeca
+ * por volta de 40% da largura): o vidro fica ao lado do assunto, nunca sobre
+ * ele. O mesmo teto vale para o corpo e a pergunta de fechamento, que estao
+ * fora do vidro e por isso nao podem cruzar a chapa de jeito nenhum. */
+.prazo-panel {
+  width: min(calc(660 * var(--s)), calc(100vw * var(--safe, 0.52) - var(--m-left)));
+  padding: calc(30 * var(--s)) calc(32 * var(--s));
   flex: 0 0 auto;
-  width: calc(300 * var(--s));
-  padding: calc(24 * var(--s));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
 }
 
-.stat.glass .t-stat { white-space: nowrap; }
+/* `.band > .glass { width: 100% }` (mais adiante na folha, mesma
+ * especificidade) vencia o min() de .prazo-panel e devolvia o painel a
+ * largura inteira da faixa, colando-o na chapa da frente. O seletor com
+ * [data-layout] vence sem !important. */
+.slide[data-layout="timeline"] .band > .prazo-panel {
+  width: min(calc(660 * var(--s)), calc(100vw * var(--safe, 0.52) - var(--m-left)));
+}
 
-.stat .t-body { max-width: calc(280 * var(--s)); }
+/* Texto solto do slide 6 respeita a mesma vertical do painel. */
+.slide[data-layout="timeline"] .band > .t-body,
+.slide[data-layout="timeline"] .band > .closing {
+  max-width: calc(660 * var(--s));
+}
+
+/* Numero grande e unidade alinhados pela base, como a soma do slide 2. */
+.pz-head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(12 * var(--s));
+  white-space: nowrap;
+}
+
+/* Tinta cheia, sem gradiente: o que doi pesa por grafite e contencao. O
+ * gradiente de texto do slide fica reservado a um elemento so, e aqui ele
+ * partia o numeral em dois tons em vez de o fazer ler como uma figura. */
+.pz-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  font-size: calc(116 * var(--s));
+  line-height: 0.92;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-left: calc(-4 * var(--s));   /* compensa o side bearing do 1 */
+}
+
+.pz-unit {
+  font-family: var(--font-mono);
+  font-size: calc(20 * var(--s));
+  letter-spacing: 0.02em;
+  color: var(--ink-body);
+}
+
+/* Legenda do numero, nao rotulo solto: fica junto da unidade, na mesma
+ * linha de base, e nao empurrada para a borda oposta do painel. */
+.pz-ate {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+}
+
+/* Regua da espera: a trilha inteira e o percurso; cada tick e um dia util. */
+.pz-ruler {
+  display: block;
+  width: 100%;
+  margin-top: calc(18 * var(--s));
+}
+
+.pz-bar {
+  position: relative;
+  height: calc(16 * var(--s));
+}
+
+.prazo-panel .pz-bar .rule.pz-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 1px;
+  background: rgba(28, 37, 40, 0.28);
+  transform-origin: left center;
+}
+
+.pz-tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: calc(7 * var(--s));
+  margin-left: -0.5px;
+  background: rgba(28, 37, 40, 0.45);
+  opacity: 0;
+}
+
+.pz-tick.is-forte { height: calc(13 * var(--s)); background: rgba(28, 37, 40, 0.7); }
+.pz-tick:last-of-type { margin-left: -1px; }
+
+/* O preenchimento cobre o percurso inteiro: a espera e o dado. */
+.prazo-panel .pz-bar .rule.pz-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 3px;
+  background: var(--ink);
+  transform-origin: left center;
+}
+
+/* Hairline vertical fechando a regua onde ela para, como no slide 3. */
+.pz-end {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--ink);
+  opacity: 0;
+}
+
+.pz-marcos {
+  position: relative;
+  height: calc(var(--fs-label) * 1.4);
+  margin-top: calc(10 * var(--s));
+}
+
+.pz-marco {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  color: var(--ink-body);
+  opacity: 0;
+}
+
+.pz-start { transform: translateX(0); }
+.pz-mid { transform: translateX(-50%); }
+.pz-end-lbl,
+.pz-marco.pz-end { right: 0; left: auto !important; transform: none; }
+
+/* Hairline fechando o bloco antes da consequencia. */
+.prazo-panel .rule.pz-close {
+  width: 100%;
+  margin: calc(20 * var(--s)) 0 calc(16 * var(--s)) 0;
+  background: rgba(28, 37, 40, 0.12);
+}
+
+.pz-stat {
+  display: flex;
+  align-items: baseline;
+  gap: calc(18 * var(--s));
+}
+
+.pz-stat .t-stat.pz-pct {
+  font-size: calc(var(--fs-stat) * 0.52);
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.pz-stat .pz-pct-txt { max-width: calc(420 * var(--s)); }
+
+@media (max-height: 820px) {
+  .pz-num { font-size: calc(104 * var(--s)); }
+  .pz-ruler { margin-top: calc(18 * var(--s)); }
+  .prazo-panel { padding: calc(26 * var(--s)) calc(30 * var(--s)); }
+  .prazo-panel .rule.pz-close { margin: calc(20 * var(--s)) 0 calc(16 * var(--s)) 0; }
+}
+
+/* Loop: o que doi e a espera inteira. A trilha e os ticks respiram devagar,
+ * em amplitude baixa e em tinta, nunca em verde-agua. So depois da revelacao,
+ * e morre na saida junto com .slide-ready. */
+.slide-ready .pz-track,
+.slide-ready .pz-tick { animation: pz-rest 7s ease-in-out infinite; }
+
+@keyframes pz-rest {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
 /* Dentro do painel do grafico, o numero de apoio tem largura propria. */
 .chart-row .stat {
@@ -1455,15 +1818,13 @@ html, body {
   50% { width: calc(34 * var(--s)); }
 }
 
-/* Slide 4: o valor mono de cada barra pisca uma vez a cada 6 s, em cascata. */
-.slide-ready .chart .mono.pulse {
-  animation: mono-flash 6s ease-in-out infinite;
-  animation-delay: calc(var(--k, 0) * 0.35s);
-}
+/* Slide 4: o que doi respira. Brilho verde-agua sob a barra da mamografia,
+   ciclo de 6 s, amplitude baixa; nasce e morre com .slide-ready. */
+.slide-ready .cap-glow { animation: cap-breathe 6s ease-in-out infinite; }
 
-@keyframes mono-flash {
-  0%, 82%, 100% { opacity: 0.7; }
-  88% { opacity: 1; }
+@keyframes cap-breathe {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.6; }
 }
 
 /* Anel que cresce e some: slide 6 (prazo) e slide 9 (proximo passo). */
@@ -1545,6 +1906,19 @@ html, body {
   75%, 100% { stroke-dashoffset: 0; opacity: 0; }
 }
 
+/* Slide 5: os filetes dos achados escurecem em cascata, um por vez, a cada
+ * 8 s. Amplitude baixa e em tinta, nunca em verde-agua: o que doi pulsa,
+ * nao grita. Morre na saida junto com .slide-ready. */
+.slide-ready .findings > .rule {
+  animation: finding-pulse 8s ease-in-out infinite;
+  animation-delay: calc(var(--k, 0) * 0.7s);
+}
+
+@keyframes finding-pulse {
+  0%, 78%, 100% { background: var(--line); }
+  88% { background: rgba(28, 37, 40, 0.4); }
+}
+
 /* Credito a 55% de opacidade, sem loop. */
 .credit { opacity: 0.55; }
 
@@ -1565,11 +1939,17 @@ html, body {
   .grad,
   .grad-v.is-drift,
   .slide-ready .ruler-active,
-  .slide-ready .chart .mono.pulse,
+  .slide-ready .cap-glow,
   .slide-ready .ring-6,
   .slide-ready .ring-9,
   .slide-ready .pin-next,
   .slide-ready .bar-glow,
+  .slide-ready .kv-ruler .kv-seg,
+  .slide-ready .findings > .rule,
+  .slide-ready .ocup-ruler .ocup-track,
+  .slide-ready .ocup-ruler .ocup-tick,
+  .slide-ready .pz-track,
+  .slide-ready .pz-tick,
   .slide-ready .arc,
   .slide-ready .redraw,
   .logo-end-spec,

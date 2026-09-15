@@ -489,6 +489,59 @@ html, body {
 .list-text { flex: 1 1 auto; }
 .list-lead { color: var(--ink); }
 
+/* ---------- Slide 7: as duas exposicoes em vidro ---------- */
+/* Um painel, duas linhas empilhadas — a lista numerada do deck, dentro do
+ * vidro. O numero e marca de regua na canaleta (40 px, como em .list-num), o
+ * texto ocupa a medida inteira (~66 caracteres em Geist 24) e um unico
+ * hairline separa as linhas: o vidro ja fecha o grupo, a ultima linha nao
+ * precisa de filete. Ritmo em tres compassos: apertado no par numero/texto,
+ * medio entre as linhas (24 + 24 de palco), generoso entre o vidro e a
+ * consequencia (24 da faixa + 16). Sem estas regras o painel herdava o
+ * `display: flex` de `.band > .glass` e deitava as duas exposicoes lado a
+ * lado, coladas. */
+.expo-panel {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.expo {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--g24);
+  padding: var(--g24) 0;
+}
+
+.expo:first-child { padding-top: 0; }
+.expo:last-child { padding-bottom: 0; }
+
+.expo-num {
+  flex: 0 0 calc(40 * var(--s));
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.expo-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.expo-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+}
+
+.expo:last-child .expo-rule { display: none; }
+
+/* A consequencia e a leitura do painel, nao mais um item dele: ganha um
+ * compasso a mais que o gap da faixa. */
+.expo-conseq { margin-top: var(--g16); }
+
 /* ---------- Slide 2: painel em duas colunas ---------- */
 /* Um unico vidro, colunas 1 a 7 (960 px na escala base). A esquerda, as
  * quatro modalidades em corpo pequeno; a direita, a soma em display grande

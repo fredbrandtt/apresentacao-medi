@@ -635,11 +635,64 @@ html, body {
   86% { filter: brightness(1.35); }
 }
 
-/* Fatos do mapa (slide 9) */
+/* Fatos do mapa (slide 9)
+ *
+ * O painel e uma pilha, nao tres colunas: `.band > .glass` e flex sem
+ * direcao declarada, entao os fatos caiam lado a lado em largura igual —
+ * a grade de cards que o sistema recusa. Em coluna, a leitura tem uma
+ * ordem so, e a figura de cada linha alinha pela base com a legenda. */
+.slide[data-layout="map"] .band > .glass {
+  flex-direction: column;
+  align-self: flex-start;
+  width: min(100%, calc(980 * var(--s)));
+}
+
 .fact {
   position: relative;
-  width: calc(686 * var(--s));
-  padding: 0 0 var(--g16) 0;
+  width: 100%;
+  padding: 0 0 var(--g24) 0;
+}
+
+/* Contraste de escala real: a figura e grande, a legenda e pequena, e nao
+ * existe medida intermediaria. A coluna da figura tem largura fixa para as
+ * tres legendas comecarem no mesmo eixo vertical. */
+.fact-row {
+  display: grid;
+  grid-template-columns: calc(168 * var(--s)) 1fr;
+  align-items: baseline;
+  column-gap: var(--g24);
+}
+
+.fact-fig {
+  font-family: var(--font-mono);
+  font-size: calc(96 * var(--s));
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  display: block;
+  text-align: right;
+}
+
+/* A tinta cheia so vale para a figura sem gradiente: `.fact-fig` vem depois
+ * de `.grad-v` no arquivo e tem a mesma especificidade, entao declarar
+ * `color` aqui apagaria o gradiente do primeiro fato. */
+.fact-fig:not(.grad-v) { color: var(--ink); }
+
+/* "Mensal" nao e numeral: entra no corpo da legenda, alinhado a direita com
+ * as figuras, para a coluna nao ganhar uma quarta medida tipografica. */
+.fact-fig.is-word {
+  font-size: calc(30 * var(--s));
+  letter-spacing: 0.02em;
+  color: var(--ink-body);
+}
+
+.fact-text {
+  font-family: var(--font-sans);
+  font-size: max(var(--fs-label), calc(var(--fs-label) * var(--grow, 1)));
+  line-height: 1.45;
+  color: var(--ink-body);
+  margin: 0;
 }
 
 .fact .rule {
@@ -649,6 +702,10 @@ html, body {
   bottom: 0;
   width: auto;
 }
+
+/* Subtracao: o filete fecha o grupo, nao separa itens. O ultimo sai. */
+.fact:last-child { padding-bottom: 0; }
+.fact:last-child .rule { display: none; }
 
 /* ---------- Capa ---------- */
 
@@ -2119,6 +2176,17 @@ html, body {
 /* Slide 9: o tracejado do pino de Lago da Pedra gira uma volta a cada 12 s. */
 .slide-ready .pin-next { animation: pin-spin 12s linear infinite; }
 
+/* Slide 9: o filete do primeiro fato partilha o ciclo de 2,4 s do anel de
+ * Lago da Pedra. Painel e mapa passam a pulsar juntos, na mesma cadencia:
+ * e o mesmo fato contado nos dois lugares. Amplitude baixa — o filete so
+ * ganha densidade, nao pisca. */
+.slide-ready .fact.is-lead .rule { animation: fact-lead-pulse 2.4s ease-out infinite; }
+
+@keyframes fact-lead-pulse {
+  0% { background: rgba(18, 168, 157, 0.55); }
+  70%, 100% { background: rgba(28, 37, 40, 0.12); }
+}
+
 @keyframes pin-spin {
   to { stroke-dashoffset: -60; }
 }
@@ -2216,6 +2284,7 @@ html, body {
   .slide-ready .ring-6,
   .slide-ready .ring-9,
   .slide-ready .pin-next,
+  .slide-ready .fact.is-lead .rule,
   .slide-ready .bar-glow,
   .slide-ready .kv-ruler .kv-seg,
   .slide-ready .findings > .rule,

@@ -609,11 +609,14 @@
     });
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass reveal">' + figs.map(function (g) {
+        '<div class="glass reveal">' + figs.map(function (g, i) {
+          /* O unico gradiente do slide cai no primeiro fato: e o numero que o
+           * mapa ilustra — quatro cidades, quatro pinos. Um ponto focal. */
+          var cls = 'fact-fig' + (i === 0 ? ' grad-v' : '');
           var fig = g.count !== undefined
-            ? '<span class="fact-fig" data-count="' + g.count + '" data-from="0">0</span>'
+            ? '<span class="' + cls + '" data-count="' + g.count + '" data-from="0">0</span>'
             : '<span class="fact-fig is-word">' + esc(g.fig) + '</span>';
-          return '<div class="fact blk reveal" data-custom>' +
+          return '<div class="fact blk reveal' + (i === 0 ? ' is-lead' : '') + '" data-custom>' +
             '<div class="fact-row">' + fig +
               '<p class="fact-text">' + esc(g.rest) + '</p>' +
             '</div>' +

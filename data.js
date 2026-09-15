@@ -133,7 +133,7 @@ window.DECK = {
       safeRight: 0.52,
       video: 'public/videos_1080p/6.mp4',
       content: {
-        title: 'O exame é feito. A resposta demora.',
+        title: ['O exame é feito.', 'A resposta demora.'],
         timeline: {
           points: [
             { label: 'Exame realizado', at: 0 },
@@ -231,7 +231,8 @@ window.DECK = {
           { number: '03', text: 'Formação em USP e UNIFESP. Membros com experiência em Boston e em Portugal.' },
           { number: '04', text: 'Cirurgião vascular dedicado aos exames de Doppler.' },
           { number: '05', text: 'Ultrassonografista titulada em medicina fetal, instrutora da principal escola de ultrassonografia de São Luís.' },
-          { number: '06', text: 'Segunda leitura por subespecialista quando indicado.' }
+          { number: '06', text: 'Segunda leitura por subespecialista quando indicado.' },
+          { number: '07', text: 'Especialistas disponíveis para discutir casos clínicos com o time médico local.' }
         ],
         closing: 'A mesma equipe que lauda hoje para a rede Humana, Unihosp e Medplan em São Luís.'
       }
@@ -245,7 +246,7 @@ window.DECK = {
       video: 'public/videos_1080p/11.mp4',
       videoFreeze: 6.0,
       content: {
-        title: 'Mesma estrutura. Nova gestão médica.',
+        title: 'Nova estrutura. Nova gestão médica.',
         table: {
           columns: { label: '', current: 'Cenário atual', proposal: 'Proposta MEDI' },
           rows: [
@@ -325,7 +326,7 @@ window.DECK = {
           { number: '02', text: 'Produtividade e SLA por modalidade, com exames dentro e fora do prazo.' },
           { number: '03', text: 'Satisfação do paciente medida por NPS em totem na unidade.' }
         ],
-        closing: 'O mesmo relatório entregue hoje à Athena Saúde e ao contratante de Paulo Ramos.',
+        closing: 'O mesmo relatório entregue hoje à Athena Saúde.',
         /* Mockup da folha do relatório. Os números abaixo são fictícios e
          * plausíveis, marcados como exemplo pelo rodapé "Modelo ilustrativo". */
         mock: {

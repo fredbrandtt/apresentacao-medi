@@ -203,6 +203,12 @@ html, body {
 .band.zone-full { width: var(--zone-full); }
 .band.to-84 { bottom: 16%; }
 
+/* Slide 10: sete itens de corpo clinico nao cabem na faixa padrao — mesmo no
+ * piso de --grow (0,85) sobravam 13 px em 1920 e 10 px em 1366. A faixa ganha
+ * os mesmos 2% de .to-84 em vez de encurtar a copy. Escopo por data-id, e nao
+ * por layout, porque o 15 tambem e text-list e mede folgado. */
+.slide[data-id="10"] .band { bottom: 16%; }
+
 .closing { margin-top: auto; }
 
 /* A nota carrega a origem do dado — e argumento, nao decoracao. Fica em

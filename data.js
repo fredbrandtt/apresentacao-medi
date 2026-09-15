@@ -157,6 +157,9 @@ window.DECK = {
       videoFreeze: 6.0,
       content: {
         title: 'Hoje o município está exposto sem saber.',
+        /* As duas exposicoes sao um grupo: entram num painel de vidro unico,
+         * porque a faixa de texto cruza a chapa do video neste slide. */
+        exposures: true,
         items: [
           { number: '01', text: 'Sem Responsável Técnico. O serviço está irregular perante o CRM-MA e a Vigilância Sanitária.' },
           { number: '02', text: 'Técnicos de radiologia fora da norma da categoria, em escala e salário. Passivo trabalhista em formação.' }

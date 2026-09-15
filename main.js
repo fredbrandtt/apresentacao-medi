@@ -14,6 +14,14 @@
   var ENTER_DELAY_MS = 520;    /* piso, quando nao ha video com duracao conhecida */
   var LOCK_MS = 700;
   var VIDEO_RATE = 2.0;        /* os videos nao tem audio: acelerar nao gera artefato */
+  /* Excesso tolerado ao congelar. O vigia de `timeupdate` e o evento `ended`
+   * so acordam depois de passar do ponto, entao corrigir significa seek para
+   * tras — e isso custa a remontagem do quadro desde o keyframe anterior, com
+   * o elemento em readyState 1 e sem imagem por ate meio segundo (e o video
+   * "sumindo" no final). Medido a 2x, o excesso real fica entre 0,21 e 0,35 s
+   * em todos os slides; acima deste piso ele para de ser deriva normal e vira
+   * falha de verdade (aba em segundo plano, engasgo), que compensa corrigir. */
+  var EXCESSO_OK = 0.5;
   var REVEAL_START = 0.35;     /* fracao da duracao efetiva em que o texto comeca */
   var REVEAL_START_S3 = 0.35;  /* slide 3: a contagem termina junto com a camera */
   var REVEAL_END = 0.85;       /* a revelacao tem de terminar antes disso */
@@ -130,7 +138,19 @@
     var html = titleHTML(c.title) + '<div class="band">';
     if (c.support) html += '<p class="t-support blk reveal">' + esc(c.support) + '</p>';
     var isKV = c.items.length && c.items[0].label !== undefined;
-    if (isKV) {
+    if (c.exposures) {
+      /* Slide 7 · As duas exposicoes entram num painel unico de vidro: sem
+       * ele, as linhas cruzariam a chapa do video (a faixa vai ate 1144 e o
+       * assunto comeca por volta de 1130). O numero vira marca de regua em
+       * mono, na canaleta, e nao numeral decorativo. */
+      html += '<div class="glass expo-panel reveal">' + c.items.map(function (it, k) {
+        return '<div class="expo blk reveal" data-custom style="--k: ' + k + '">' +
+          '<span class="expo-num t-label">' + esc(it.number) + '</span>' +
+          '<p class="expo-text t-body">' + esc(it.text) + '</p>' +
+          '<div class="rule draw-x expo-rule"></div>' +
+        '</div>';
+      }).join('') + '</div>';
+    } else if (isKV) {
       /* Slide 2: um painel de vidro em duas colunas. A esquerda, as quatro
        * modalidades em linhas pequenas; a direita, a soma em display grande,
        * a unidade em mono alinhada pela base e uma regua com ticks em que cada
@@ -170,7 +190,10 @@
     }
     if (c.body) {
       var body = c.alertWord ? esc(c.body).replace(esc(c.alertWord), '<span class="alert-word">' + esc(c.alertWord) + '</span>') : esc(c.body);
-      html += ruleHTML() + '<p class="t-body blk maxw-900 reveal">' + body + '</p>';
+      /* Com painel, a consequencia entra sozinha e sem filete: o vidro ja
+       * fecha o grupo acima dela. */
+      html += (c.exposures ? '' : ruleHTML()) +
+        '<p class="t-body blk maxw-900 reveal' + (c.exposures ? ' expo-conseq' : '') + '">' + body + '</p>';
     }
     if (c.closing) html += ruleHTML('closing-rule') + '<p class="t-statement blk closing maxw-980 reveal">' + esc(c.closing) + '</p>';
     html += '</div>';
@@ -327,23 +350,38 @@
     var dias = mSeg ? parseInt(mSeg[1], 10) : 11;
     var unidade = mSeg ? mSeg[2] : seg;
 
-    var ticks = '', rotulos = '';
+    /* O percurso vai do exame ao retorno medico (0 a 1). Os dias uteis
+     * terminam no marco intermediario de data.js: os ticks e o preenchimento
+     * param ali, e dali ate o retorno segue so a trilha fina. */
+    var meio = pts.filter(function (p) { return p.at > 0 && p.at < 1; })[0];
+    var fim = meio ? meio.at : 1;
+    var pctFim = (fim * 100).toFixed(3) + '%';
+
+    var ticks = '';
     for (var d = 0; d <= dias; d++) {
-      var pos = (d / dias * 100).toFixed(3);
+      var pos = (d / dias * fim * 100).toFixed(3);
       var forte = (d === 0 || d === dias);
-      ticks += '<i class="pz-tick fade' + (forte ? ' is-forte' : '') + '" style="left: ' + pos + '%; --k: ' + d + '"></i>';
+      ticks += '<i class="pz-tick fade' + (forte ? ' is-forte' : '') + '" style="left: ' + pos + '%"></i>';
     }
-    /* Marcos do percurso: os tres pontos de data.js, nas posicoes de data.js. */
-    var marcos = pts.map(function (p, i) {
-      var anchor = p.at === 0 ? 'start' : (p.at === 1 ? 'end' : 'mid');
-      return '<span class="pz-marco fade pz-' + anchor + '" data-at="' + p.at + '" style="left: ' + (p.at * 100).toFixed(3) + '%">' + esc(p.label) + '</span>';
+    /* Marcos: as pontas numa linha, o laudo na linha de baixo, pendurado no
+     * proprio tick por uma linha-guia. Sem transform: prep()/settle() limpam
+     * o inline e a posicao precisa viver no CSS.
+     *
+     * As classes sao .pz-m-start/.pz-m-mid/.pz-m-end e o CSS casa com elas
+     * via .pz-marco.pz-m-*. Nao encurtar para .pz-end: esse nome ja e o
+     * hairline vertical da regua, e a colisao empilhava os tres rotulos. */
+    var marcos = pts.map(function (p) {
+      if (p.at === 0) return '<span class="pz-marco pz-m-start fade">' + esc(p.label) + '</span>';
+      if (p.at === 1) return '<span class="pz-marco pz-m-end fade">' + esc(p.label) + '</span>';
+      return '<span class="pz-marco pz-m-mid fade" style="right: ' + ((1 - p.at) * 100).toFixed(3) + '%">' + esc(p.label) + '</span>';
     }).join('');
 
     var m = /^(\d+)(%?)$/.exec(c.stat.number);
     return titleHTML(c.title) +
-      '<div class="band">' +
-        /* O painel de vidro e o palco unico do grupo de dados: regua, numero
-         * grande e o percentual. Fica na coluna esquerda, longe do assunto. */
+      '<div class="band to-84">' +
+        /* O painel de vidro e o palco unico do grupo de dados: numero grande,
+         * regua dos dias e a parcela que cabe no prazo. Fica na coluna
+         * esquerda, com folga antes da chapa da frente. */
         '<div class="glass prazo-panel reveal">' +
           '<div class="pz-head blk reveal" data-custom>' +
             countHTML(dias, { tag: 'span', cls: 'pz-num' }) +
@@ -353,15 +391,25 @@
           '<div class="pz-ruler blk reveal" data-custom aria-hidden="true">' +
             '<div class="pz-bar">' +
               '<i class="rule draw-x pz-track"></i>' + ticks +
-              '<i class="rule draw-x pz-fill"></i>' +
-              '<i class="pz-end fade"></i>' +
+              '<i class="rule draw-x pz-fill" style="width: ' + pctFim + '"></i>' +
+              '<i class="pz-end fade" style="left: ' + pctFim + '"></i>' +
+              '<i class="pz-lead fade" style="left: ' + pctFim + '"></i>' +
             '</div>' +
             '<div class="pz-marcos t-label">' + marcos + '</div>' +
           '</div>' +
-          '<div class="rule draw-x pz-close" aria-hidden="true"></div>' +
+          /* A parcela no prazo e pequena e tem forma propria: uma frase com o
+           * numero em mono e, abaixo, a barra curta contra a trilha inteira.
+           * Sem filete entre os dois blocos: cada instrumento ja e uma linha. */
           '<div class="pz-stat blk reveal" data-custom>' +
-            countHTML(parseInt(m[1], 10), { tag: 'p', cls: 't-stat pz-pct', suffix: m[2] }) +
-            '<p class="t-body pz-pct-txt">' + esc(c.stat.text) + '</p>' +
+            '<p class="t-body pz-share-txt">' +
+              countHTML(parseInt(m[1], 10), { tag: 'span', cls: 'pz-pct', suffix: m[2] }) +
+              ' ' + esc(c.stat.text) +
+            '</p>' +
+            '<div class="pz-share" aria-hidden="true">' +
+              '<i class="rule draw-x pz-share-track"></i>' +
+              '<i class="rule draw-x pz-share-fill" style="width: ' + esc(c.stat.number) + '"></i>' +
+              '<i class="pz-share-end fade" style="left: ' + esc(c.stat.number) + '"></i>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<p class="t-body blk reveal">' + esc(c.body) + '</p>' +
@@ -517,10 +565,29 @@
       if (p.sub) s += '<text class="sub fade" x="' + lx.toFixed(1) + '" y="' + (ly + 22).toFixed(1) + '" text-anchor="' + cfg.anchor + '">' + esc(p.sub) + '</text>';
       return s + '</g>';
     }).join('');
+    /* Cada fato abre com o dado que sustenta o argumento. O numeral sai da
+     * frase e vira figura: mono tabular, corpo grande, base alinhada com a
+     * legenda ao lado. Quando o fato nao comeca por numero (o relatorio
+     * mensal), a cadencia ocupa o lugar da figura, no mesmo corpo — assim a
+     * coluna tem tres figuras e nenhuma medida intermediaria. */
+    var figs = c.facts.map(function (f) {
+      var m = /^(\d+)\s+(.*)$/.exec(f);
+      if (m) return { count: parseInt(m[1], 10), fig: m[1], rest: m[2] };
+      var k = /\bmensal\b/i.exec(f);
+      if (k) return { fig: 'Mensal', rest: f.replace(/\s*mensal\s*/i, ' ').replace(/\s+/g, ' ').trim() };
+      return { fig: '', rest: f };
+    });
     return titleHTML(c.title) +
       '<div class="band">' +
-        '<div class="glass reveal">' + c.facts.map(function (f) {
-          return '<div class="fact blk reveal" data-custom><p class="t-statement">' + esc(f) + '</p><div class="rule draw-x"></div></div>';
+        '<div class="glass reveal">' + figs.map(function (g) {
+          var fig = g.count !== undefined
+            ? '<span class="fact-fig" data-count="' + g.count + '" data-from="0">0</span>'
+            : '<span class="fact-fig is-word">' + esc(g.fig) + '</span>';
+          return '<div class="fact blk reveal" data-custom>' +
+            '<div class="fact-row">' + fig +
+              '<p class="fact-text">' + esc(g.rest) + '</p>' +
+            '</div>' +
+            '<div class="rule draw-x"></div></div>';
         }).join('') + '</div>' +
       '</div>' +
       '<div class="map-wrap blk reveal" data-custom><svg class="map" viewBox="0 0 ' + W + ' ' + H + '"><path class="state draw" d="' + path + '"></path>' + pins + '</svg></div>' +
@@ -689,7 +756,7 @@
   /* Estados: preparar (inicial), assentar (final)                       */
   /* ------------------------------------------------------------------ */
 
-  var ANIM_SEL = '.blk, .tl-in, .fade, .pop, .grow-x, .grow-y, .draw, .pct, .callout, .val-cur, .val-pro, .delta, .seg, .pt-label, .note, .cn-label, .statements > p, .kv-label, .kv-value, .c-label, .c-current, .c-proposal, .list-num, .list-text, .fact > p, .rule, .stat';
+  var ANIM_SEL = '.blk, .tl-in, .fade, .pop, .grow-x, .grow-y, .draw, .pct, .callout, .val-cur, .val-pro, .delta, .seg, .pt-label, .note, .cn-label, .statements > p, .kv-label, .kv-value, .c-label, .c-current, .c-proposal, .list-num, .list-text, .fact-fig, .fact-text, .rule, .stat';
 
   /* Tudo que entra e sai carrega .reveal. A saida seleciona por ela, de modo
    * que painel de vidro, nota e SVG saiam junto com os blocos de texto. */
@@ -1044,7 +1111,9 @@
 
   /* Slide 6: a espera conta. O numero de dias sobe enquanto a regua desenha e
    * os ticks acendem em cadencia — numero e linha sao o mesmo dado, como no
-   * slide 2. So depois entra o percentual, que e a consequencia. */
+   * slide 2. As pontas do percurso entram, a linha-guia desce ate o laudo, e
+   * so depois entra a parcela no prazo: o numero conta e a barra curta cresce
+   * na mesma curva, contra a trilha inteira. */
   CHOREO[6] = function (h, tl, sec) {
     var t = h.lines(h.one('.t-title'), 0) - 0.5;
     var ruler = h.one('.pz-ruler'), head = h.one('.pz-head');
@@ -1071,29 +1140,56 @@
     ticks.forEach(function (tk, i) {
       var f = nTicks > 0 ? i / nTicks : 1;
       var p = RM ? 0 : 1 - Math.pow(Math.max(0, 1 - f), 1 / 3);
-      tl.to(tk, { opacity: 1, duration: RM ? 0.3 : 0.3, ease: 'power2.out' }, r0 + p * D);
+      tl.to(tk, { opacity: 1, duration: 0.3, ease: 'power2.out' }, r0 + p * D);
     });
 
     var fim = r0 + D;
     h.fade(ruler.querySelector('.pz-end'), fim - 0.15, { dur: 0.3 });
-    h.fade(h.q('.pz-marco'), fim - 0.1, { stagger: 0.08, dur: 0.4 });
-    h.ruleX(h.one('.pz-close'), fim + 0.1, 0.7);
+    h.fade(h.q('.pz-m-start, .pz-m-end'), fim - 0.1, { stagger: 0.08, dur: 0.4 });
 
-    var stat = h.one('.pz-stat');
-    h.block(stat, fim + 0.25, { y: 12 });
-    h.count(stat.querySelector('[data-count]'), fim + 0.3, 0.9);
+    /* A linha-guia desce do tick do laudo ate o marco, que entra em seguida. */
+    var lead = ruler.querySelector('.pz-lead');
+    if (lead) {
+      tl.set(lead, { opacity: 1 }, fim);
+      if (!RM) tl.fromTo(lead, { scaleY: 0, transformOrigin: 'top center' }, { scaleY: 1, duration: 0.5, ease: EASE_OUT }, fim);
+    }
+    h.fade(h.one('.pz-m-mid'), fim + 0.25, { dur: 0.4 });
 
-    h.block(h.one('.band > .t-body'), fim + 0.6);
-    h.block(h.one('.closing'), fim + 1.0);
-    h.note(fim + 1.3);
+    var stat = h.one('.pz-stat'), s0 = fim + 0.5;
+    h.block(stat, s0, { y: 12 });
+    h.ruleX(stat.querySelector('.pz-share-track'), s0 + 0.1, 0.6);
+    var share = stat.querySelector('.pz-share-fill'), pct = stat.querySelector('[data-count]');
+    if (pct) h.count(pct, s0 + 0.15, 0.9);
+    if (RM) tl.set(share, { scaleX: 1 }, s0 + 0.15);
+    else tl.fromTo(share, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.9, ease: EASE_COUNT }, s0 + 0.15);
+    h.fade(stat.querySelector('.pz-share-end'), s0 + 0.9, { dur: 0.3 });
+
+    h.block(h.one('.band > .t-body'), s0 + 0.55);
+    h.block(h.one('.closing'), s0 + 0.95);
+    h.note(s0 + 1.25);
   };
 
   CHOREO[7] = function (h, tl, sec) {
     var t = h.lines(h.one('.t-title'), 0, { dur: 1.2 }) - 0.6;
+    /* As exposicoes sao `data-custom`: entram aqui, uma a uma dentro do vidro,
+     * como as linhas do slide 2 — numero e texto sobem juntos e o hairline
+     * fecha a linha. Sem esta passagem elas ficam no opacity 0 de prep(). */
+    var expos = h.q('.expo'), e0 = t + 0.2, fimExpo = e0;
+    expos.forEach(function (row, i) {
+      var at = e0 + i * 0.22;
+      tl.set(row, { opacity: 1 }, at);
+      h.block([row.querySelector('.expo-num'), row.querySelector('.expo-text')], at, { y: 14, stagger: 0.06 });
+      h.ruleX(row.querySelector('.expo-rule'), at + 0.2, 0.6);
+      fimExpo = at + 0.7;
+    });
+    /* Os demais blocos (titulo ja contado, consequencia) seguem a cascata. */
     var blocks = h.q('.blk').filter(function (b) { return !b.hasAttribute('data-custom'); });
     var end = h.block(blocks, t, { stagger: 0.16 });
-    var body = h.one('.t-body'), bodyAt = t + (blocks.indexOf(body)) * 0.16;
-    tl.call(function () { var w = sec.querySelector('.alert-word'); if (w) w.classList.add('is-on'); }, null, bodyAt + 0.6);
+    var body = h.one('.expo-conseq') || h.one('.t-body');
+    /* A consequencia so entra depois do vidro fechar: ela e a leitura do que
+     * esta no painel, nao mais um item dele. */
+    if (body) { tl.killTweensOf(body); end = h.block(body, Math.max(fimExpo, end - 0.2), { y: 18 }); }
+    tl.call(function () { var w = sec.querySelector('.alert-word'); if (w) w.classList.add('is-on'); }, null, end + 0.1);
     return end;
   };
 
@@ -1121,12 +1217,22 @@
     h.pop(pin, nAt, { dur: 0.26 });
     if (!RM) tl.fromTo(pin, { strokeDashoffset: 0 }, { strokeDashoffset: -30, duration: 2.0, ease: 'power1.inOut' }, nAt + 0.2);
     h.fade(next.querySelectorAll('.fade'), nAt + 0.08, { dur: 0.4 });
+    /* Ordem de leitura: o filete abre o bloco, a figura conta, a legenda
+     * assenta em seguida. Contar e mais lento que aparecer, entao a legenda
+     * entra junto com o fim da contagem, nao depois dela. */
     var facts = h.q('.fact');
     facts.forEach(function (f, i) {
       var at = p0 + i * 0.16;
       tl.set(f, { opacity: 1 }, at);
-      h.block(f.querySelector('p'), at + 0.05);
       h.ruleX(f.querySelector('.rule'), at, 0.6);
+      var fig = f.querySelector('.fact-fig');
+      if (fig && fig.hasAttribute('data-count')) {
+        tl.set(fig, { opacity: 1 }, at + 0.05);
+        h.count(fig, at + 0.05, RM ? 0 : 0.9);
+      } else {
+        h.block(fig, at + 0.05, { y: 12 });
+      }
+      h.block(f.querySelector('.fact-text'), at + 0.18, { y: 12 });
     });
     h.note(nAt + 0.6);
   };
@@ -1327,8 +1433,19 @@
     v.addEventListener('ended', function () {
       /* Congela no ponto de descanso do slide, que so e o ultimo frame quando
        * o assunto continua em quadro ate o fim. Nunca remove, esconde ou troca
-       * o src do elemento que esta na frente. */
-      try { v.currentTime = freezeTime(v, vSrc[k]); } catch (e) { /* ignorado */ }
+       * o src do elemento que esta na frente.
+       *
+       * Quando o video termina inteiro, `ended` chega com o cursor ja no fim —
+       * praticamente em cima do alvo. Pedir seek nesse instante custa caro: o
+       * Chrome descarta o frame decodificado e remonta desde o keyframe
+       * anterior (no 5.mp4 o ultimo e 4,0 s), e por ~0,5 s o elemento fica em
+       * readyState 1, sem quadro nenhum — o vídeo "some" no final. Medido: com
+       * o seek, 525 ms sem frame; sem ele, zero. Entao so busca o alvo quando
+       * ele esta de fato atras, longe o bastante para mudar o que se ve. */
+      var alvo = freezeTime(v, vSrc[k]);
+      if (v.currentTime - alvo > EXCESSO_OK) {
+        try { v.currentTime = alvo; } catch (e) { /* ignorado */ }
+      }
       v.pause();
     });
     v.addEventListener('error', function () { if (k === front) media.classList.add('is-failed'); });
@@ -1392,7 +1509,12 @@
       var alvo = freezeTime(v, i);
       if (v.currentTime >= alvo) {
         v.removeEventListener('timeupdate', watch); v.__freezeWatch = null;
-        try { v.currentTime = alvo; } catch (e) { /* ignorado */ }
+        /* Mesmo cuidado do handler de `ended`: o vigia so acorda depois de
+         * passar do alvo, entao o seek e sempre para tras e custa a remontagem
+         * do quadro a partir do keyframe anterior — meio segundo sem imagem. */
+        if (v.currentTime - alvo > EXCESSO_OK) {
+          try { v.currentTime = alvo; } catch (e) { /* ignorado */ }
+        }
         v.pause();
       }
     };

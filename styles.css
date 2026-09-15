@@ -1198,9 +1198,17 @@ html, body {
   opacity: 0;
 }
 
+/* Duas linhas: as pontas do percurso em cima, o laudo pendurado embaixo no
+ * proprio tick. Tres rotulos numa linha so nao cabem — em 1366 a folga entre
+ * "Exame realizado" e "Laudo em 11 dias uteis" ia a poucos pixels.
+ *
+ * A altura e exatamente as duas linhas de rotulo (1.4 cada) mais a folga da
+ * linha-guia entre elas. Nao sobrar aqui: a faixa do slide 6 e fechada
+ * (.band.to-84, bottom 16%) e o que passar disso empurra a pergunta de
+ * fechamento por cima da nota, que mora em bottom 12%. */
 .pz-marcos {
   position: relative;
-  height: calc(var(--fs-label) * 1.4);
+  height: calc(var(--fs-label) * 2.6);
   margin-top: calc(10 * var(--s));
 }
 
@@ -1212,22 +1220,50 @@ html, body {
   opacity: 0;
 }
 
-.pz-start { transform: translateX(0); }
-.pz-mid { transform: translateX(-50%); }
-.pz-end-lbl,
-.pz-marco.pz-end { right: 0; left: auto !important; transform: none; }
+/* Os seletores acompanham as classes que o builder emite (.pz-m-*). Ficam
+ * presos a .pz-marco de proposito: .pz-end sozinho e o hairline da regua, e
+ * foi essa colisao de nome que empilhou os tres rotulos na mesma origem. */
+.pz-marco.pz-m-start { left: 0; }
+.pz-marco.pz-m-end { right: 0; left: auto; }
 
-/* Hairline fechando o bloco antes da consequencia. */
-.prazo-panel .rule.pz-close {
-  width: 100%;
-  margin: calc(20 * var(--s)) 0 calc(16 * var(--s)) 0;
-  background: rgba(28, 37, 40, 0.12);
+/* O do meio desce e ancora pela direita no inline `right` do builder, que
+ * cai no tick do laudo. Sem translate: a borda direita do rotulo e a
+ * referencia, e assim ele cresce para a esquerda, longe da ponta. */
+.pz-marco.pz-m-mid {
+  top: auto;
+  bottom: 0;
+  transform: translateX(calc(50% - 1px));
+  color: var(--ink);
 }
 
+/* Linha-guia que desce do tick do laudo ate o rotulo de baixo. A coreografia
+ * faz o scaleY a partir do topo; sem altura declarada nao havia o que escalar.
+ *
+ * A altura tem de atravessar o que existe entre a base da regua e o topo do
+ * rotulo de baixo: o margin-top de .pz-marcos (10) mais a faixa que sobra
+ * acima do rotulo, que e a altura de .pz-marcos (2.6 label) menos a linha do
+ * proprio rotulo (1.4 label). Escrito como conta, e nao como numero magico,
+ * para nao descolar se a altura da faixa mudar. */
+.pz-lead {
+  position: absolute;
+  top: 100%;
+  width: 1px;
+  height: calc(10 * var(--s) + var(--fs-label) * 1.2);
+  margin-left: -0.5px;
+  background: rgba(28, 37, 40, 0.28);
+  opacity: 0;
+}
+
+/* A frase e a barra empilham: sao o mesmo dado em duas formas, nao dois
+ * itens lado a lado. Era o flex/baseline que jogava a barra para a direita
+ * da frase em vez de sob ela. */
+/* Sem margin-top: o .band ja separa os filhos com gap var(--g24), e somar os
+ * dois estourava a faixa por baixo. */
 .pz-stat {
   display: flex;
-  align-items: baseline;
-  gap: calc(18 * var(--s));
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(12 * var(--s));
 }
 
 .pz-stat .t-stat.pz-pct {
@@ -1236,13 +1272,53 @@ html, body {
   color: var(--ink);
 }
 
-.pz-stat .pz-pct-txt { max-width: calc(420 * var(--s)); }
+.pz-stat .pz-share-txt { max-width: calc(420 * var(--s)); }
 
+/* A parcela no prazo contra a trilha inteira: a barra curta so significa
+ * alguma coisa com o percurso todo visivel atras dela. */
+.pz-share {
+  position: relative;
+  height: calc(10 * var(--s));
+}
+
+.prazo-panel .pz-share .rule.pz-share-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: 1px;
+  background: rgba(28, 37, 40, 0.28);
+  transform-origin: left center;
+}
+
+.prazo-panel .pz-share .rule.pz-share-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--ink);
+  transform-origin: left center;
+}
+
+.pz-share-end {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 100%;
+  margin-left: -1px;
+  background: var(--ink);
+  opacity: 0;
+}
+
+/* Em tela baixa a faixa e o que aperta primeiro: o painel perde padding e o
+ * numero desce um degrau. Sem margin em .pz-stat — o gap do .band ja separa,
+ * e somar os dois era o que estourava a faixa por baixo. */
 @media (max-height: 820px) {
   .pz-num { font-size: calc(104 * var(--s)); }
   .pz-ruler { margin-top: calc(18 * var(--s)); }
   .prazo-panel { padding: calc(26 * var(--s)) calc(30 * var(--s)); }
-  .prazo-panel .rule.pz-close { margin: calc(20 * var(--s)) 0 calc(16 * var(--s)) 0; }
+  .pz-marcos { height: calc(var(--fs-label) * 2.4); }
 }
 
 /* Loop: o que doi e a espera inteira. A trilha e os ticks respiram devagar,
@@ -1268,21 +1344,146 @@ html, body {
 .chart-row .stat .t-stat { white-space: nowrap; }
 .chart-row .stat .t-body { max-width: 100%; }
 
-/* ---------- Comparativo (slide 11) ---------- */
+/* ---------- Comparativo (slide 11) ----------
+ *
+ * Dois degraus, sem nada no meio: o par promovido em display (72 px) e o
+ * livro-razao em 17 px. Era a ausencia desse contraste que fazia dez linhas de
+ * peso igual nao terem entrada de leitura. */
+
+.cmp-his {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: calc(14 * var(--s));
+  margin-bottom: calc(20 * var(--s));
+}
+
+.cmp-hi { position: relative; padding-bottom: calc(16 * var(--s)); }
+
+.cmp-hi .rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+}
+
+.cmp-hi-label {
+  margin-bottom: calc(6 * var(--s));
+  letter-spacing: 0.08em;
+}
+
+/* Base alinhada entre o valor de hoje, o numero proposto e a unidade. */
+.cmp-hi-row {
+  display: flex;
+  align-items: baseline;
+  gap: calc(18 * var(--s));
+}
+
+.cmp-hi-now-val {
+  font-family: var(--font-sans);
+  font-size: calc(22 * var(--s) * var(--grow, 1));
+  line-height: 1.2;
+  color: var(--current);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A seta e um hairline com ponta, nao um glifo: alinha na base do numero e
+   nao carrega peso tipografico. */
+.cmp-hi-to { align-self: center; }
+
+.cmp-hi-arrow {
+  display: block;
+  width: calc(44 * var(--s));
+  height: 1px;
+  background: var(--line-ruler);
+  position: relative;
+}
+
+.cmp-hi-arrow::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: calc(7 * var(--s));
+  height: calc(7 * var(--s));
+  border-top: 1px solid var(--line-ruler);
+  border-right: 1px solid var(--line-ruler);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.cmp-hi-new {
+  display: flex;
+  align-items: baseline;
+  gap: calc(8 * var(--s));
+}
+
+.cmp-hi-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100;
+  font-weight: 500;
+  font-size: calc(72 * var(--s) * var(--grow, 1));
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.cmp-hi-unit {
+  font-family: var(--font-sans);
+  font-size: calc(22 * var(--s) * var(--grow, 1));
+  line-height: 1.2;
+  color: var(--ink-body);
+  white-space: nowrap;
+}
+
+/* Arco de meta: ecoa a curvatura do anel do video e da forma propria ao
+   indice. Trilha apagada, preenchimento em teal, tick na meta contratual. */
+.cmp-hi-arcwrap { margin-left: auto; align-self: center; }
+
+.cmp-arc {
+  display: block;
+  width: calc(132 * var(--s));
+  height: auto;
+}
+
+.cmp-arc-track {
+  fill: none;
+  stroke: var(--line-ruler);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.cmp-arc-fill {
+  fill: none;
+  stroke: var(--medi-teal);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.cmp-arc-meta { stroke: var(--ink-soft); stroke-width: 1; }
+
+/* Legenda do livro-razao em mono: substitui o cabecalho de tres colunas, que
+   era mais uma faixa de texto competindo com o par promovido. */
+.cmp-ledger-cap {
+  letter-spacing: 0.08em;
+  margin-bottom: calc(8 * var(--s));
+}
 
 .cmp {
   width: 100%;
   display: flex;
   flex-direction: column;
-  --cmp-fs: calc(18 * var(--s) * var(--grow, 1));
+  --cmp-fs: calc(17 * var(--s) * var(--grow, 1));
 }
 
 .cmp-row {
   position: relative;
   display: grid;
-  grid-template-columns: calc(220 * var(--s)) calc(360 * var(--s)) 1fr;
+  grid-template-columns: calc(220 * var(--s)) calc(300 * var(--s)) 1fr;
   column-gap: var(--g16);
-  padding: calc(5 * var(--s)) 0;
+  padding: calc(4 * var(--s)) 0;
 }
 
 .cmp-row .rule {
@@ -1291,16 +1492,6 @@ html, body {
   right: 0;
   bottom: 0;
   width: auto;
-}
-
-.cmp-head { padding-top: 0; }
-
-.cmp-head span {
-  font-family: var(--font-mono);
-  font-size: calc(16 * var(--s));
-  letter-spacing: 0.08em;
-  color: var(--ink-muted);
-  line-height: 1.4;
 }
 
 .cmp-row .c-label {
